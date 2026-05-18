@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.autostart"
+    namespace = "com.bootlauncher"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.autostart"
+        applicationId = "com.bootlauncher"
         minSdk = 24
         targetSdk = 34
         versionCode = 1

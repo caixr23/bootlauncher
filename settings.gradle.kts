@@ -18,5 +18,5 @@ dependencyResolution {
     }
 }
 
-rootProject.name = "AutoStart"
+rootProject.name = "BootLauncher"
 include(":app")
