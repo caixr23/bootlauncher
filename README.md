@@ -30,6 +30,13 @@ Android 开机自启应用 —— 设备启动后自动按顺序、带延时地�
 # JDK
 sudo apt install openjdk-17-jdk
 
+# Gradle（仅需用于生成 Wrapper，实际编译由 Wrapper 管理的版本执行）
+wget https://services.gradle.org/distributions/gradle-8.10-bin.zip
+unzip gradle-8.10-bin.zip -d ~/
+export PATH=$HOME/gradle-8.10/bin:$PATH
+gradle --version  # 验证安装
+# 注意：系统安装的 Gradle 版本不影响编译，Wrapper 会使用指定版本（当前 8.10）
+
 # Android SDK 命令行工具
 mkdir -p ~/Android/Sdk/cmdline-tools
 cd ~/Android/Sdk/cmdline-tools
@@ -39,20 +46,33 @@ mv cmdline-tools latest
 
 # 环境变量（加入 ~/.bashrc 持久化）
 export ANDROID_HOME=$HOME/Android/Sdk
-export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$HOME/gradle-8.10/bin:$PATH
 
 # 安装 SDK 组件
 sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
 yes | sdkmanager --licenses
 ```
 
-### 2. 编译项目
+### 2. 生成 Gradle Wrapper
 
 ```bash
-./gradlew assembleDebug
+cd ~/cxr/code/git/bootlauncher
+# 如果系统 Gradle 版本不是 8.10，需显式指定版本（AGP 8.5.0 要求 Gradle ≥ 8.7）
+gradle wrapper --gradle-version 8.10
 ```
 
-APK 输出路径：`app/build/outputs/apk/debug/app-debug.apk`
+### 3. 编译项目
+
+```bash
+# Debug 版本
+./gradlew assembleDebug
+
+# Release 版本（需要签名配置）
+./gradlew assembleRelease
+```
+
+- Debug APK：`app/build/outputs/apk/debug/app-debug.apk`
+- Release APK：`app/build/outputs/apk/release/app-release.apk`
 
 ## 使用方法
 
