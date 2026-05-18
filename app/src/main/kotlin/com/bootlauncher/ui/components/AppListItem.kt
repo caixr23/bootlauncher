@@ -49,7 +49,7 @@ fun AppListItem(
         ) {
             icon?.let {
                 Image(
-                    bitmap = asImageBitmap(it.toBitmap()),
+                    bitmap = it.toBitmap().asImageBitmap(),
                     contentDescription = app.label,
                     modifier = Modifier.size(40.dp)
                 )

@@ -73,7 +73,7 @@ fun AppPickerSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Image(
-                        bitmap = asImageBitmap(app.icon.toBitmap()),
+                        bitmap = app.icon.toBitmap().asImageBitmap(),
                         contentDescription = app.label,
                         modifier = Modifier.size(36.dp)
                     )
