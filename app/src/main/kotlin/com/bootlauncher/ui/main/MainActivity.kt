@@ -375,10 +375,10 @@ private fun runDiagnostics(context: Context): List<CheckResult> {
             android.content.ComponentName(pkg, "com.bootlauncher.receiver.BootReceiver"),
             PackageManager.GET_META_DATA
         )
-        bootReceiver = receiverInfo.enabled
+        receiverInfo.enabled
     } catch (e: Exception) {
         FileLogger.w("Diag", "BootReceiver check failed", e)
-        bootReceiver = false
+        false
     }
     results.add(CheckResult(
         "Boot Receiver Registered",
