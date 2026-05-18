@@ -10,6 +10,7 @@ import android.util.Log
 import com.bootlauncher.R
 import com.bootlauncher.data.local.AppDatabase
 import com.bootlauncher.data.local.AppRepository
+import com.bootlauncher.data.local.LaunchLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,15 +30,19 @@ class AppLaunchService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        repository = AppRepository(AppDatabase.getDatabase(this).appDao())
+        Log.d(TAG, "onCreate")
+        val db = AppDatabase.getDatabase(this)
+        repository = AppRepository(db.appDao(), db.launchLogDao())
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, "Service started, launching configured apps")
+        val bootTime = intent?.getLongExtra("boot_time", System.currentTimeMillis())
+            ?: System.currentTimeMillis()
+        Log.d(TAG, "onStartCommand: bootTime=$bootTime")
         serviceScope.launch {
-            launchConfiguredApps()
+            launchConfiguredApps(bootTime)
             stopSelf(startId)
         }
         return START_NOT_STICKY
@@ -47,41 +52,69 @@ class AppLaunchService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "Service destroyed")
+        Log.d(TAG, "onDestroy")
     }
 
-    private suspend fun launchConfiguredApps() {
+    private suspend fun launchConfiguredApps(bootTime: Long) {
         val apps = repository.getEnabledAppsOnce()
         if (apps.isEmpty()) {
             Log.d(TAG, "No enabled apps to launch")
             return
         }
 
-        Log.d(TAG, "Launching ${apps.size} apps")
+        Log.d(TAG, "Launching ${apps.size} apps, bootTime=$bootTime")
+        val logs = mutableListOf<LaunchLog>()
 
-        for (app in apps) {
+        for ((index, app) in apps.withIndex()) {
+            val startTime = System.currentTimeMillis()
+            Log.d(TAG, "[$index/${apps.size}] Preparing to launch: ${app.label} (${app.packageName}), delay=${app.delayMs}ms")
+
             if (app.delayMs > 0) {
-                Log.d(TAG, "Waiting ${app.delayMs}ms before launching ${app.label}")
+                Log.d(TAG, "  Waiting ${app.delayMs}ms...")
                 delay(app.delayMs)
             }
-            launchApp(app.packageName)
+
+            val result = launchApp(app.packageName)
+            val endTime = System.currentTimeMillis()
+            val elapsed = endTime - startTime
+
+            logs.add(
+                LaunchLog(
+                    bootTime = bootTime,
+                    packageName = app.packageName,
+                    launchTime = endTime,
+                    delayMs = app.delayMs,
+                    success = result.first,
+                    errorMessage = result.second
+                )
+            )
+
+            if (result.first) {
+                Log.d(TAG, "  Launched ${app.packageName} in ${elapsed}ms")
+            } else {
+                Log.e(TAG, "  Failed to launch ${app.packageName} in ${elapsed}ms: ${result.second}")
+            }
         }
 
-        Log.d(TAG, "All apps launched")
+        repository.insertLaunchLogs(logs)
+        val totalElapsed = System.currentTimeMillis() - bootTime
+        Log.d(TAG, "All apps launched. Total elapsed: ${totalElapsed}ms")
     }
 
-    private fun launchApp(packageName: String) {
-        try {
+    private fun launchApp(packageName: String): Pair<Boolean, String?> {
+        return try {
             val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
             if (launchIntent != null) {
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 startActivity(launchIntent)
-                Log.d(TAG, "Launched: $packageName")
+                Pair(true, null)
             } else {
                 Log.w(TAG, "No launch intent for: $packageName")
+                Pair(false, "No launch intent found")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to launch $packageName", e)
+            Pair(false, e.message)
         }
     }
 
@@ -95,6 +128,7 @@ class AppLaunchService : Service() {
         }
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(channel)
+        Log.d(TAG, "Notification channel created: $CHANNEL_ID")
     }
 
     private fun buildNotification() = android.app.Notification.Builder(this, CHANNEL_ID)

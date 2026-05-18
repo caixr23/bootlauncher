@@ -61,13 +61,32 @@ cd ~/cxr/code/git/bootlauncher
 gradle wrapper --gradle-version 8.10
 ```
 
-### 3. 编译项目
+### 3. 生成签名证书
+
+Release 版本需要签名才能安装。在 `app/` 目录下生成密钥库：
+
+```bash
+cd ~/cxr/code/git/bootlauncher/app
+keytool -genkeypair -v \
+  -keystore bootlauncher.jks \
+  -keyalg RSA \
+  -keysize 2048 \
+  -validity 10000 \
+  -alias bootlauncher \
+  -storepass bootlauncher123 \
+  -keypass bootlauncher123 \
+  -dname "CN=BootLauncher, OU=Dev, O=BootLauncher, L=Unknown, ST=Unknown, C=CN"
+```
+
+> 已有默认证书，无需重新生成即可直接编译。如需自定义密码或信息，修改上述参数，并同步更新 `app/build.gradle.kts` 中的 `signingConfigs`。
+
+### 4. 编译项目
 
 ```bash
 # Debug 版本
 ./gradlew assembleDebug
 
-# Release 版本（需要签名配置）
+# Release 版本
 ./gradlew assembleRelease
 ```
 

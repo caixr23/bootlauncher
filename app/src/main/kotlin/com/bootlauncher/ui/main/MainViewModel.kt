@@ -3,9 +3,12 @@ package com.bootlauncher.ui.main
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.bootlauncher.BootLauncherApp
 import com.bootlauncher.data.local.AppDatabase
 import com.bootlauncher.data.local.AppEntity
 import com.bootlauncher.data.local.AppRepository
+import com.bootlauncher.data.local.LaunchLog
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -17,12 +20,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: AppRepository
 
     init {
-        val dao = AppDatabase.getDatabase(application).appDao()
-        repository = AppRepository(dao)
+        val db = AppDatabase.getDatabase(application)
+        repository = AppRepository(db.appDao(), db.launchLogDao())
     }
 
     val apps: StateFlow<List<AppEntity>> = repository.getAllApps()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _latestBootTime = MutableStateFlow<Long?>(null)
+    val latestBootTime: StateFlow<Long?> = _latestBootTime
+
+    private val _bootLogs = MutableStateFlow<List<LaunchLog>>(emptyList())
+    val bootLogs: StateFlow<List<LaunchLog>> = _bootLogs
+
+    val autoStartEnabled: MutableStateFlow<Boolean> = MutableStateFlow(
+        BootLauncherApp.isAutoStartEnabled(application)
+    )
+
+    init {
+        loadLatestBootLogs()
+    }
+
+    private fun loadLatestBootLogs() {
+        viewModelScope.launch {
+            val bootTime = repository.getLatestBootTime()
+            if (bootTime != null) {
+                _latestBootTime.value = bootTime
+                _bootLogs.value = repository.getLogsForBoot(bootTime)
+            }
+        }
+    }
+
+    fun setAutoStartEnabled(enabled: Boolean) {
+        BootLauncherApp.setAutoStartEnabled(getApplication(), enabled)
+        autoStartEnabled.value = enabled
+    }
 
     fun addApp(packageName: String, label: String) {
         viewModelScope.launch {
@@ -53,12 +85,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateDelay(id: Long, delayMs: Long) {
         viewModelScope.launch {
-            repository.getAllApps().collect { apps ->
-                val target = apps.find { it.id == id }
-                if (target != null) {
-                    repository.update(target.copy(delayMs = delayMs))
-                    return@collect
-                }
+            val current = repository.getAllApps().first()
+            val target = current.find { it.id == id }
+            if (target != null) {
+                repository.update(target.copy(delayMs = delayMs))
             }
         }
     }

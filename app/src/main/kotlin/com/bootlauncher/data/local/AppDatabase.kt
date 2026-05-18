@@ -4,13 +4,36 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [AppEntity::class], version = 1, exportSchema = false)
+@Database(
+    entities = [AppEntity::class, LaunchLog::class],
+    version = 2,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun appDao(): AppDao
+    abstract fun launchLogDao(): LaunchLogDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
+
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS launch_logs (
+                        bootTime INTEGER NOT NULL,
+                        packageName TEXT NOT NULL,
+                        launchTime INTEGER NOT NULL,
+                        delayMs INTEGER NOT NULL,
+                        success INTEGER NOT NULL,
+                        errorMessage TEXT,
+                        PRIMARY KEY (bootTime, packageName)
+                    )
+                """)
+            }
+        }
 
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -18,7 +41,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "bootlauncher.db"
-                ).build().also { INSTANCE = it }
+                )
+                    .addMigrations(MIGRATION_1_2)
+                    .build().also { INSTANCE = it }
             }
         }
     }
