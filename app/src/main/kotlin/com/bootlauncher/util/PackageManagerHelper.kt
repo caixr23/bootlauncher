@@ -10,7 +10,7 @@ data class InstalledApp(
     val icon: android.graphics.drawable.Drawable
 )
 
-class PackageManagerHelper(private val context: Context) {
+class PackageManagerHelper(val context: Context) {
 
     private val pm = context.packageManager
 
