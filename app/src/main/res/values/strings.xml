@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AutoStart</string>
+    <string name="channel_name">Auto Launch Service</string>
+    <string name="channel_description">Shows when auto-launching apps on boot</string>
+    <string name="notification_title">AutoStart</string>
+    <string name="notification_text">Launching configured apps…</string>
+    <string name="launcher_message">Auto-start service running…</string>
+    <string name="main_title">Boot AutoStart Manager</string>
+    <string name="add_app">Add App</string>
+    <string name="delay_seconds">%ds</string>
+    <string name="delay_label">Delay</string>
+    <string name="remove_app">Remove</string>
+    <string name="empty_list">No apps configured. Tap \"+\" to add.</string>
+    <string name="enabled_label">Boot auto-start enabled</string>
+    <string name="installed_apps">Installed Apps</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="seconds">seconds</string>
+</resources>
