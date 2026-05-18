@@ -3,10 +3,16 @@ package com.bootlauncher
 import android.app.Application
 import android.content.Context
 import com.bootlauncher.data.local.AppDatabase
+import com.bootlauncher.util.FileLogger
 
 class BootLauncherApp : Application() {
 
     val database by lazy { AppDatabase.getDatabase(this) }
+
+    override fun onCreate() {
+        super.onCreate()
+        FileLogger.init(this)
+    }
 
     companion object {
         private const val PREFS_NAME = "bootlauncher_prefs"

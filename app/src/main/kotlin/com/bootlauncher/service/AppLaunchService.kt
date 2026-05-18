@@ -6,11 +6,11 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.IBinder
-import android.util.Log
 import com.bootlauncher.R
 import com.bootlauncher.data.local.AppDatabase
 import com.bootlauncher.data.local.AppRepository
 import com.bootlauncher.data.local.LaunchLog
+import com.bootlauncher.util.FileLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,7 +30,7 @@ class AppLaunchService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "onCreate")
+        FileLogger.d(TAG, "onCreate")
         val db = AppDatabase.getDatabase(this)
         repository = AppRepository(db.appDao(), db.launchLogDao())
         createNotificationChannel()
@@ -40,7 +40,7 @@ class AppLaunchService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val bootTime = intent?.getLongExtra("boot_time", System.currentTimeMillis())
             ?: System.currentTimeMillis()
-        Log.d(TAG, "onStartCommand: bootTime=$bootTime")
+        FileLogger.d(TAG, "onStartCommand: bootTime=$bootTime")
         serviceScope.launch {
             launchConfiguredApps(bootTime)
             stopSelf(startId)
@@ -52,25 +52,25 @@ class AppLaunchService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "onDestroy")
+        FileLogger.d(TAG, "onDestroy")
     }
 
     private suspend fun launchConfiguredApps(bootTime: Long) {
         val apps = repository.getEnabledAppsOnce()
         if (apps.isEmpty()) {
-            Log.d(TAG, "No enabled apps to launch")
+            FileLogger.d(TAG, "No enabled apps to launch")
             return
         }
 
-        Log.d(TAG, "Launching ${apps.size} apps, bootTime=$bootTime")
+        FileLogger.d(TAG, "Launching ${apps.size} apps, bootTime=$bootTime")
         val logs = mutableListOf<LaunchLog>()
 
         for ((index, app) in apps.withIndex()) {
             val startTime = System.currentTimeMillis()
-            Log.d(TAG, "[$index/${apps.size}] Preparing to launch: ${app.label} (${app.packageName}), delay=${app.delayMs}ms")
+            FileLogger.d(TAG, "[$index/${apps.size}] Preparing to launch: ${app.label} (${app.packageName}), delay=${app.delayMs}ms")
 
             if (app.delayMs > 0) {
-                Log.d(TAG, "  Waiting ${app.delayMs}ms...")
+                FileLogger.d(TAG, "  Waiting ${app.delayMs}ms...")
                 delay(app.delayMs)
             }
 
@@ -90,15 +90,15 @@ class AppLaunchService : Service() {
             )
 
             if (result.first) {
-                Log.d(TAG, "  Launched ${app.packageName} in ${elapsed}ms")
+                FileLogger.d(TAG, "  Launched ${app.packageName} in ${elapsed}ms")
             } else {
-                Log.e(TAG, "  Failed to launch ${app.packageName} in ${elapsed}ms: ${result.second}")
+                FileLogger.e(TAG, "  Failed to launch ${app.packageName} in ${elapsed}ms: ${result.second}")
             }
         }
 
         repository.insertLaunchLogs(logs)
         val totalElapsed = System.currentTimeMillis() - bootTime
-        Log.d(TAG, "All apps launched. Total elapsed: ${totalElapsed}ms")
+        FileLogger.d(TAG, "All apps launched. Total elapsed: ${totalElapsed}ms")
     }
 
     private fun launchApp(packageName: String): Pair<Boolean, String?> {
@@ -109,11 +109,11 @@ class AppLaunchService : Service() {
                 startActivity(launchIntent)
                 Pair(true, null)
             } else {
-                Log.w(TAG, "No launch intent for: $packageName")
+                FileLogger.w(TAG, "No launch intent for: $packageName")
                 Pair(false, "No launch intent found")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to launch $packageName", e)
+            FileLogger.e(TAG, "Failed to launch $packageName", e)
             Pair(false, e.message)
         }
     }
@@ -128,7 +128,7 @@ class AppLaunchService : Service() {
         }
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(channel)
-        Log.d(TAG, "Notification channel created: $CHANNEL_ID")
+        FileLogger.d(TAG, "Notification channel created: $CHANNEL_ID")
     }
 
     private fun buildNotification() = android.app.Notification.Builder(this, CHANNEL_ID)
