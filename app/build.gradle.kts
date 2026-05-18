@@ -17,9 +17,19 @@ android {
         versionName = "1.0.0"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("bootlauncher.jks")
+            storePassword = "bootlauncher123"
+            keyAlias = "bootlauncher"
+            keyPassword = "bootlauncher123"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
