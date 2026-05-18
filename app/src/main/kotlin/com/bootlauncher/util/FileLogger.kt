@@ -33,9 +33,10 @@ object FileLogger {
         write("DEBUG", tag, msg)
     }
 
-    fun w(tag: String, msg: String) {
-        Log.w(tag, msg)
-        write("WARN", tag, msg)
+    fun w(tag: String, msg: String, throwable: Throwable? = null) {
+        Log.w(tag, msg, throwable)
+        val fullMsg = if (throwable != null) "$msg\n${Log.getStackTraceString(throwable)}" else msg
+        write("WARN", tag, fullMsg)
     }
 
     fun e(tag: String, msg: String, throwable: Throwable? = null) {

@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.content.Context
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
@@ -369,8 +370,7 @@ private fun runDiagnostics(context: Context): List<CheckResult> {
     FileLogger.d("Diag", "Battery whitelist: $ignoringBattery")
 
     // 3. Boot receiver registered
-    val bootReceiver: Boolean
-    try {
+    val bootReceiver = try {
         val receiverInfo = pm.getReceiverInfo(
             android.content.ComponentName(pkg, "com.bootlauncher.receiver.BootReceiver"),
             PackageManager.GET_META_DATA
@@ -397,17 +397,17 @@ private fun runDiagnostics(context: Context): List<CheckResult> {
     FileLogger.d("Diag", "Auto-start enabled: $autoStart")
 
     // 5. Foreground service type declared
-    val serviceInfo = try {
-        pm.getServiceInfo(
+    val serviceType = try {
+        val info = pm.getServiceInfo(
             android.content.ComponentName(pkg, "com.bootlauncher.service.AppLaunchService"),
             PackageManager.GET_META_DATA
         )
-        serviceInfo.foregroundServiceType
+        info.foregroundServiceType
     } catch (e: Exception) {
         FileLogger.w("Diag", "Service check failed", e)
         0
     }
-    val hasSpecialUse = serviceInfo and android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE != 0
+    val hasSpecialUse = serviceType and android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE != 0
     results.add(CheckResult(
         "Foreground Service Type",
         hasSpecialUse,

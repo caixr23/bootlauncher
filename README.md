@@ -66,7 +66,7 @@ gradle wrapper --gradle-version 8.10
 Release 版本需要签名才能安装。在 `app/` 目录下生成密钥库：
 
 ```bash
-cd ~/cxr/code/git/bootlauncher/app
+cd app
 keytool -genkeypair -v \
   -keystore bootlauncher.jks \
   -keyalg RSA \
