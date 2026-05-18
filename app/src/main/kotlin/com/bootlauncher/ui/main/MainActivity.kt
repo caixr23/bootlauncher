@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -28,7 +29,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -56,16 +60,20 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.bootlauncher.BootLauncherApp
 import com.bootlauncher.data.local.AppEntity
 import com.bootlauncher.data.local.LaunchLog
 import com.bootlauncher.ui.components.AppListItem
 import com.bootlauncher.ui.components.AppPickerSheet
 import com.bootlauncher.ui.components.DelayPickerDialog
 import com.bootlauncher.ui.theme.BootLauncherTheme
+import com.bootlauncher.util.FileLogger
 import com.bootlauncher.util.PackageManagerHelper
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+data class CheckResult(val name: String, val passed: Boolean, val detail: String)
 
 class MainActivity : ComponentActivity() {
 
@@ -94,6 +102,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
     var showAppPicker by remember { mutableStateOf(false) }
     var showDelayDialog by remember { mutableStateOf<AppEntity?>(null) }
     var showLogsExpanded by remember { mutableStateOf(false) }
+    var checkResults by remember { mutableStateOf<List<CheckResult>>(emptyList()) }
 
     val context = LocalContext.current
     val notificationPermissionGranted = remember {
@@ -109,7 +118,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         notificationPermissionGranted.value = granted
-        Log.d("MainActivity", "Notification permission: $granted")
+        FileLogger.d("MainActivity", "Notification permission: $granted")
     }
 
     LaunchedEffect(Unit) {
@@ -159,6 +168,49 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            item {
+                Button(
+                    onClick = { checkResults = runDiagnostics(context) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Text("  Diagnose Permissions", modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+
+            if (checkResults.isNotEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            val allPassed = checkResults.all { it.passed }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    if (allPassed) Icons.Default.CheckCircle else Icons.Default.Error,
+                                    contentDescription = null,
+                                    tint = if (allPassed) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.error
+                                )
+                                Text(
+                                    if (allPassed) "All checks passed"
+                                    else "${checkResults.count { it.passed }}/${checkResults.size} passed",
+                                    modifier = Modifier.padding(start = 8.dp),
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                            checkResults.forEach { result ->
+                                CheckResultItem(result)
+                            }
+                        }
+                    }
+                }
+            }
+
             if (!notificationPermissionGranted.value) {
                 item {
                     Card(
@@ -196,7 +248,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
                             )
                             context.startActivity(intent)
                         } catch (e: Exception) {
-                            Log.w("MainActivity", "Battery optimization settings not available", e)
+                            FileLogger.w("MainActivity", "Battery optimization settings not available", e)
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -287,6 +339,136 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
             },
             onDismiss = { showDelayDialog = null }
         )
+    }
+}
+
+private fun runDiagnostics(context: Context): List<CheckResult> {
+    val results = mutableListOf<CheckResult>()
+    val pm = context.packageManager
+    val pkg = context.packageName
+
+    // 1. Notification permission
+    val notifGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    } else true
+    results.add(CheckResult(
+        "Notification Permission",
+        notifGranted,
+        if (notifGranted) "Granted" else "Denied (POST_NOTIFICATIONS)"
+    ))
+    FileLogger.d("Diag", "Notification: $notifGranted")
+
+    // 2. Battery optimization whitelist
+    val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    val ignoringBattery = powerManager.isIgnoringBatteryOptimizations(pkg)
+    results.add(CheckResult(
+        "Battery Optimization Whitelist",
+        ignoringBattery,
+        if (ignoringBattery) "Whitelisted" else "Not whitelisted (may be killed by system)"
+    ))
+    FileLogger.d("Diag", "Battery whitelist: $ignoringBattery")
+
+    // 3. Boot receiver registered
+    val bootReceiver: Boolean
+    try {
+        val receiverInfo = pm.getReceiverInfo(
+            android.content.ComponentName(pkg, "com.bootlauncher.receiver.BootReceiver"),
+            PackageManager.GET_META_DATA
+        )
+        bootReceiver = receiverInfo.enabled
+    } catch (e: Exception) {
+        FileLogger.w("Diag", "BootReceiver check failed", e)
+        bootReceiver = false
+    }
+    results.add(CheckResult(
+        "Boot Receiver Registered",
+        bootReceiver,
+        if (bootReceiver) "Enabled, will receive BOOT_COMPLETED" else "NOT registered or disabled"
+    ))
+    FileLogger.d("Diag", "BootReceiver enabled: $bootReceiver")
+
+    // 4. Auto-start enabled
+    val autoStart = BootLauncherApp.isAutoStartEnabled(context)
+    results.add(CheckResult(
+        "Auto-start Enabled",
+        autoStart,
+        if (autoStart) "Will launch apps on boot" else "Disabled in settings"
+    ))
+    FileLogger.d("Diag", "Auto-start enabled: $autoStart")
+
+    // 5. Foreground service type declared
+    val serviceInfo = try {
+        pm.getServiceInfo(
+            android.content.ComponentName(pkg, "com.bootlauncher.service.AppLaunchService"),
+            PackageManager.GET_META_DATA
+        )
+        serviceInfo.foregroundServiceType
+    } catch (e: Exception) {
+        FileLogger.w("Diag", "Service check failed", e)
+        0
+    }
+    val hasSpecialUse = serviceInfo and android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE != 0
+    results.add(CheckResult(
+        "Foreground Service Type",
+        hasSpecialUse,
+        if (hasSpecialUse) "SPECIAL_USE declared" else "Missing SPECIAL_USE type (Android 14+ will fail)"
+    ))
+    FileLogger.d("Diag", "Foreground service type: specialUse=$hasSpecialUse")
+
+    // 6. QUERY_ALL_PACKAGES effectiveness
+    val installedCount = try {
+        val intent = Intent(Intent.ACTION_MAIN, null).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        pm.queryIntentActivities(intent, PackageManager.MATCH_ALL).size
+    } catch (e: Exception) {
+        FileLogger.w("Diag", "queryIntentActivities failed", e)
+        -1
+    }
+    val queryOk = installedCount > 0
+    results.add(CheckResult(
+        "App Query (QUERY_ALL_PACKAGES)",
+        queryOk,
+        if (queryOk) "Found $installedCount launchable apps" else "Cannot query apps (set as default launcher first)"
+    ))
+    FileLogger.d("Diag", "Installed apps query: count=$installedCount")
+
+    // 7. File logger accessible
+    val logFile = FileLogger.getLogFile()
+    val logOk = logFile != null && logFile.parentFile?.exists() == true
+    results.add(CheckResult(
+        "File Logger",
+        logOk,
+        if (logOk) "Path: ${logFile?.absolutePath}" else "Log directory not accessible"
+    ))
+    FileLogger.d("Diag", "Log file: ${logFile?.absolutePath}")
+
+    return results
+}
+
+@Composable
+private fun CheckResultItem(result: CheckResult) {
+    val icon = if (result.passed) Icons.Default.CheckCircle else Icons.Default.Error
+    val tint = if (result.passed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Icon(
+            icon, contentDescription = null, tint = tint,
+            modifier = Modifier.padding(end = 8.dp, top = 2.dp)
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(result.name, style = MaterialTheme.typography.bodySmall)
+            Text(
+                result.detail,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+        }
     }
 }
 
