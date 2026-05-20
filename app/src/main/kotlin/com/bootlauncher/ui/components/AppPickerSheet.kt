@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
+import com.bootlauncher.util.FileLogger
 import com.bootlauncher.util.InstalledApp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,11 +73,19 @@ fun AppPickerSheet(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Image(
-                        bitmap = app.icon.toBitmap().asImageBitmap(),
-                        contentDescription = app.label,
-                        modifier = Modifier.size(36.dp)
-                    )
+                    val iconBitmap = try {
+                        app.icon.toBitmap()
+                    } catch (e: Exception) {
+                        FileLogger.e("AppPickerSheet", "toBitmap failed for ${app.packageName}", e)
+                        null
+                    }
+                    if (iconBitmap != null) {
+                        Image(
+                            bitmap = iconBitmap.asImageBitmap(),
+                            contentDescription = app.label,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
                     Text(
                         text = app.label,
                         style = MaterialTheme.typography.bodyLarge,

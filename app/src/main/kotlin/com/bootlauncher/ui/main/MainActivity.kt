@@ -193,7 +193,10 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAppPicker = true }) {
+            FloatingActionButton(onClick = {
+                FileLogger.d("MainActivity", "FAB clicked, opening app picker")
+                showAppPicker = true
+            }) {
                 Icon(Icons.Default.Add, contentDescription = "Add App")
             }
         }
@@ -401,12 +404,15 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
     }
 
     if (showAppPicker) {
+        FileLogger.d("MainActivity", "showAppPicker=true, loading installed apps")
         val installedApps = remember(configuredPackages) {
             pmHelper.getInstalledApps(setOf("com.bootlauncher") + configuredPackages)
         }
+        FileLogger.d("MainActivity", "AppPickerSheet composing with ${installedApps.size} apps")
         AppPickerSheet(
             installedApps = installedApps,
             onAppSelected = { installedApp ->
+                FileLogger.d("MainActivity", "App selected: ${installedApp.packageName}")
                 viewModel.addApp(installedApp.packageName, installedApp.label)
                 showAppPicker = false
             },
