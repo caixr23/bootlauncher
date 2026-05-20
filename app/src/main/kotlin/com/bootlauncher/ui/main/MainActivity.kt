@@ -10,6 +10,7 @@ import android.content.Context
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -74,6 +75,40 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+fun isDefaultLauncher(context: Context): Boolean {
+    val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+    val resolveInfo = context.packageManager.resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
+    return resolveInfo?.activityInfo?.packageName == context.packageName
+}
+
+fun requestDefaultLauncher(context: Context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        try {
+            val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? android.app.role.RoleManager
+            if (roleManager?.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME) == true) {
+                val intent = roleManager.createRequestRoleIntent(android.app.role.RoleManager.ROLE_HOME)
+                (context as? ComponentActivity)?.startActivityForResult(intent, REQUEST_CODE_SET_LAUNCHER)
+                return
+            }
+        } catch (e: Exception) {
+            FileLogger.w("Launcher", "RoleManager failed, fallback to settings", e)
+        }
+    }
+    try {
+        val intent = Intent(Settings.ACTION_HOME_SETTINGS)
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        FileLogger.w("Launcher", "ACTION_HOME_SETTINGS failed, fallback to default apps", e)
+        try {
+            context.startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+        } catch (e2: Exception) {
+            Toast.makeText(context, "Cannot open launcher settings", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+private const val REQUEST_CODE_SET_LAUNCHER = 1001
+
 data class CheckResult(val name: String, val passed: Boolean, val detail: String)
 
 class MainActivity : ComponentActivity() {
@@ -104,6 +139,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
     var showDelayDialog by remember { mutableStateOf<AppEntity?>(null) }
     var showLogsExpanded by remember { mutableStateOf(false) }
     var checkResults by remember { mutableStateOf<List<CheckResult>>(emptyList()) }
+    var isDefaultLauncher by remember { mutableStateOf(isDefaultLauncher(context)) }
 
     val context = LocalContext.current
     val notificationPermissionGranted = remember {
@@ -269,6 +305,53 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
                 }
             }
 
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isDefaultLauncher)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                if (isDefaultLauncher) Icons.Default.CheckCircle else Icons.Default.Error,
+                                contentDescription = null,
+                                tint = if (isDefaultLauncher) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                if (isDefaultLauncher) "Is Default Launcher"
+                                else "NOT Default Launcher",
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                        if (!isDefaultLauncher) {
+                            Text(
+                                "App is not set as the default home screen. Tap below to set it.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                            )
+                            Button(
+                                onClick = { requestDefaultLauncher(context) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Set as Default Launcher")
+                            }
+                        }
+                    }
+                }
+            }
+
             if (latestBootTime != null) {
                 item {
                     BootTimeCard(
@@ -347,6 +430,15 @@ private fun runDiagnostics(context: Context): List<CheckResult> {
     val results = mutableListOf<CheckResult>()
     val pm = context.packageManager
     val pkg = context.packageName
+
+    // 0. Default launcher check
+    val isHome = isDefaultLauncher(context)
+    results.add(CheckResult(
+        "Default Launcher",
+        isHome,
+        if (isHome) "Is the default home screen" else "NOT set as default launcher (tap the button above to set)"
+    ))
+    FileLogger.d("Diag", "Default launcher: $isHome")
 
     // 1. Notification permission
     val notifGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
