@@ -29,6 +29,7 @@ class PackageManagerHelper(val context: Context) {
         FileLogger.d("PackageManagerHelper", "queryIntentActivities returned ${resolveInfos.size} results")
         return resolveInfos
             .filter { it.activityInfo.packageName !in excludePackageNames }
+            .distinctBy { it.activityInfo.packageName }
             .map {
                 val appInfo = it.activityInfo.applicationInfo
                 val icon = try {
