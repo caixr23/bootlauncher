@@ -139,9 +139,9 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
     var showDelayDialog by remember { mutableStateOf<AppEntity?>(null) }
     var showLogsExpanded by remember { mutableStateOf(false) }
     var checkResults by remember { mutableStateOf<List<CheckResult>>(emptyList()) }
-    var isDefaultLauncher by remember { mutableStateOf(isDefaultLauncher(context)) }
 
     val context = LocalContext.current
+    var isDefaultLauncher by remember { mutableStateOf(isDefaultLauncher(context)) }
     val notificationPermissionGranted = remember {
         mutableStateOf(
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
