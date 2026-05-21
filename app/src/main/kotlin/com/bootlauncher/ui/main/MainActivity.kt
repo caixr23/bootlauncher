@@ -381,26 +381,9 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
                     }
                 }
             } else {
-                FileLogger.d("MainActivity", "Rendering ${apps.size} configured apps")
                 items(apps, key = { it.id }) { app ->
-                    FileLogger.d("MainActivity", "Configured app item: id=${app.id}, pkg=${app.packageName}, label=${app.label}")
-                    val icon = remember(app.packageName) {
-                        try {
-                            FileLogger.d("MainActivity", "Loading icon for ${app.packageName}")
-                            val drawable = pmHelper.context.packageManager.getApplicationIcon(app.packageName)
-                            FileLogger.d("MainActivity", "Icon loaded for ${app.packageName}: class=${drawable.javaClass.simpleName}")
-                            drawable
-                        } catch (e: PackageManager.NameNotFoundException) {
-                            FileLogger.w("MainActivity", "Icon not found for ${app.packageName}", e)
-                            null
-                        } catch (e: Exception) {
-                            FileLogger.e("MainActivity", "Unexpected error loading icon for ${app.packageName}", e)
-                            null
-                        }
-                    }
                     AppListItem(
                         app = app,
-                        icon = icon,
                         onEnabledChange = { enabled -> viewModel.updateEnabled(app, enabled) },
                         onDelayClick = { showDelayDialog = app },
                         onDelete = { viewModel.removeApp(app) }
