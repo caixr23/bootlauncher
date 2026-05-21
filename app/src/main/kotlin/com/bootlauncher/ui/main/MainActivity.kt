@@ -118,12 +118,20 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("MainActivity", "onCreate")
-        pmHelper = PackageManagerHelper(this)
-        setContent {
-            BootLauncherTheme {
-                MainScreen(viewModel, pmHelper)
+        FileLogger.d("MainActivity", "onCreate start")
+        try {
+            pmHelper = PackageManagerHelper(this)
+            FileLogger.d("MainActivity", "pmHelper created")
+            setContent {
+                FileLogger.d("MainActivity", "setContent lambda entered")
+                BootLauncherTheme {
+                    FileLogger.d("MainActivity", "BootLauncherTheme lambda entered")
+                    MainScreen(viewModel, pmHelper)
+                }
             }
+            FileLogger.d("MainActivity", "setContent returned")
+        } catch (e: Exception) {
+            FileLogger.e("MainActivity", "onCreate failed", e)
         }
     }
 }
@@ -131,17 +139,23 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
+    FileLogger.d("MainActivity", "step1 - collectAsState apps")
     val apps by viewModel.apps.collectAsState()
+    FileLogger.d("MainActivity", "step2 - collectAsState others")
     val autoStartEnabled by viewModel.autoStartEnabled.collectAsState()
     val latestBootTime by viewModel.latestBootTime.collectAsState()
     val bootLogs by viewModel.bootLogs.collectAsState()
+    FileLogger.d("MainActivity", "step3 - remember states")
     var showAppPicker by remember { mutableStateOf(false) }
     var showDelayDialog by remember { mutableStateOf<AppEntity?>(null) }
     var showLogsExpanded by remember { mutableStateOf(false) }
     var checkResults by remember { mutableStateOf<List<CheckResult>>(emptyList()) }
 
+    FileLogger.d("MainActivity", "step4 - LocalContext")
     val context = LocalContext.current
+    FileLogger.d("MainActivity", "step5 - isDefaultLauncher check")
     var isDefaultLauncher by remember { mutableStateOf(isDefaultLauncher(context)) }
+    FileLogger.d("MainActivity", "step6 - permission check")
     val notificationPermissionGranted = remember {
         mutableStateOf(
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
