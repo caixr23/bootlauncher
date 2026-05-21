@@ -165,6 +165,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
         )
     }
 
+    FileLogger.d("MainActivity", "step7 - permissionLauncher")
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -172,6 +173,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
         FileLogger.d("MainActivity", "Notification permission: $granted")
     }
 
+    FileLogger.d("MainActivity", "step8 - LaunchedEffect")
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -186,6 +188,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
     val configuredPackages = remember(apps) { apps.map { it.packageName }.toSet() }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
+    FileLogger.d("MainActivity", "step9 - Scaffold start")
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -215,6 +218,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
             }
         }
     ) { padding ->
+        FileLogger.d("MainActivity", "step10 - LazyColumn start")
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -380,6 +384,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
                 }
             }
 
+            FileLogger.d("MainActivity", "step11 - apps list, size=${apps.size}")
             if (apps.isEmpty()) {
                 item {
                     Box(
@@ -407,6 +412,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
 
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
+        FileLogger.d("MainActivity", "step12 - LazyColumn done")
     }
 
     if (showAppPicker) {
