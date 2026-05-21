@@ -3,6 +3,7 @@ package com.bootlauncher.ui.main
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.bootlauncher.util.FileLogger
 import com.bootlauncher.BootLauncherApp
 import com.bootlauncher.data.local.AppDatabase
 import com.bootlauncher.data.local.AppEntity
@@ -57,17 +58,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addApp(packageName: String, label: String) {
+        FileLogger.d("MainViewModel", "addApp called: packageName=$packageName, label=$label")
         viewModelScope.launch {
-            val currentApps = repository.getAllApps().first()
-            val nextSortOrder = currentApps.size
-            repository.insert(
-                AppEntity(
+            try {
+                val currentApps = repository.getAllApps().first()
+                val nextSortOrder = currentApps.size
+                val entity = AppEntity(
                     packageName = packageName,
                     label = label,
                     sortOrder = nextSortOrder,
                     enabled = true
                 )
-            )
+                FileLogger.d("MainViewModel", "inserting entity: $entity")
+                repository.insert(entity)
+                val updatedApps = repository.getAllApps().first()
+                FileLogger.d("MainViewModel", "after insert, total apps: ${updatedApps.size}")
+            } catch (e: Exception) {
+                FileLogger.e("MainViewModel", "addApp failed for $packageName", e)
+            }
         }
     }
 

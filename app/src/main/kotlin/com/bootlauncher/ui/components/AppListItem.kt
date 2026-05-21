@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.unit.dp
 import com.bootlauncher.data.local.AppEntity
+import com.bootlauncher.util.FileLogger
 
 @Composable
 fun AppListItem(
@@ -35,6 +36,7 @@ fun AppListItem(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    FileLogger.d("AppListItem", "composing app: ${app.packageName} (id=${app.id}), label=${app.label}")
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -48,11 +50,22 @@ fun AppListItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             icon?.let {
-                Image(
-                    bitmap = it.toBitmap().asImageBitmap(),
-                    contentDescription = app.label,
-                    modifier = Modifier.size(40.dp)
-                )
+                FileLogger.d("AppListItem", "icon for ${app.packageName}: class=${it.javaClass.simpleName}, w=${it.intrinsicWidth}, h=${it.intrinsicHeight}")
+                val iconBitmap = try {
+                    it.toBitmap()
+                } catch (e: Exception) {
+                    FileLogger.e("AppListItem", "toBitmap failed for ${app.packageName}: ${e.message}", e)
+                    null
+                }
+                if (iconBitmap != null) {
+                    Image(
+                        bitmap = iconBitmap.asImageBitmap(),
+                        contentDescription = app.label,
+                        modifier = Modifier.size(40.dp)
+                    )
+                } else {
+                    FileLogger.w("AppListItem", "skipping Image for ${app.packageName}")
+                }
             }
             Column(
                 modifier = Modifier
