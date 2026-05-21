@@ -227,6 +227,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
+                FileLogger.d("MainActivity", "lazyitem: diagnose button")
                 Button(
                     onClick = { checkResults = runDiagnostics(context) },
                     modifier = Modifier.fillMaxWidth()
@@ -238,6 +239,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
 
             if (checkResults.isNotEmpty()) {
                 item {
+                    FileLogger.d("MainActivity", "lazyitem: checkResults card")
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
@@ -271,6 +273,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
 
             if (!notificationPermissionGranted.value) {
                 item {
+                    FileLogger.d("MainActivity", "lazyitem: notification permission card")
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
@@ -297,6 +300,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
             }
 
             item {
+                FileLogger.d("MainActivity", "lazyitem: battery optimization button")
                 TextButton(
                     onClick = {
                         try {
@@ -327,6 +331,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
             }
 
             item {
+                FileLogger.d("MainActivity", "lazyitem: launcher status card")
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -375,6 +380,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
 
             if (latestBootTime != null) {
                 item {
+                    FileLogger.d("MainActivity", "lazyitem: BootTimeCard")
                     BootTimeCard(
                         bootTime = latestBootTime!!,
                         logs = bootLogs,
@@ -387,6 +393,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
             FileLogger.d("MainActivity", "step11 - apps list, size=${apps.size}")
             if (apps.isEmpty()) {
                 item {
+                    FileLogger.d("MainActivity", "lazyitem: empty apps placeholder")
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -400,7 +407,9 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
                     }
                 }
             } else {
+                FileLogger.d("MainActivity", "items(apps) start, count=${apps.size}")
                 items(apps, key = { it.id }) { app ->
+                    FileLogger.d("MainActivity", "AppListItem item: id=${app.id}, pkg=${app.packageName}")
                     AppListItem(
                         app = app,
                         onEnabledChange = { enabled -> viewModel.updateEnabled(app, enabled) },
@@ -413,6 +422,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
         FileLogger.d("MainActivity", "step12 - LazyColumn done")
+        FileLogger.d("MainActivity", "step13 - after LazyColumn, showAppPicker=$showAppPicker")
     }
 
     if (showAppPicker) {
@@ -432,7 +442,9 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
         )
     }
 
+    FileLogger.d("MainActivity", "step14 - showDelayDialog=$showDelayDialog")
     showDelayDialog?.let { app ->
+        FileLogger.d("MainActivity", "step15 - DelayPickerDialog composing")
         DelayPickerDialog(
             currentDelaySeconds = (app.delayMs / 1000).toInt(),
             onSave = { newDelayMs ->
