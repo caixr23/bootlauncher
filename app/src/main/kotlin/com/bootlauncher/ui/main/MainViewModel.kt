@@ -21,8 +21,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: AppRepository
 
     init {
+        FileLogger.d("MainViewModel", "init: getting database")
         val db = AppDatabase.getDatabase(application)
+        FileLogger.d("MainViewModel", "init: database obtained")
         repository = AppRepository(db.appDao(), db.launchLogDao())
+        FileLogger.d("MainViewModel", "init: repository created")
     }
 
     val apps: StateFlow<List<AppEntity>> = repository.getAllApps()
