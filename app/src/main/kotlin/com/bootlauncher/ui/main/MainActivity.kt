@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.content.Context
+import com.bootlauncher.service.AppLaunchService
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
@@ -137,6 +138,9 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             FileLogger.e("MainActivity", "onCreate failed", e)
         }
+        val serviceIntent = Intent(this, AppLaunchService::class.java)
+        serviceIntent.putExtra("boot_time", System.currentTimeMillis())
+        startForegroundService(serviceIntent)
     }
 }
 
