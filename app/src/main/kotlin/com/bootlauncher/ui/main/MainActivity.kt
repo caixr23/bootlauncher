@@ -107,10 +107,10 @@ fun requestDefaultLauncher(context: Context) {
         Intent(Settings.ACTION_HOME_SETTINGS),
         Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS),
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = "package:${context.packageName}"
+            data = Uri.parse("package:${context.packageName}")
         },
         Intent("android.settings.APPLICATION_DETAILS_SETTINGS").apply {
-            data = "package:${context.packageName}"
+            data = Uri.parse("package:${context.packageName}")
         }
     )
     for (intent in intents) {
