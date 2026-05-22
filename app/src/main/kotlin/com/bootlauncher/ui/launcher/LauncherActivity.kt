@@ -1,17 +1,17 @@
 package com.bootlauncher.ui.launcher
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.widget.TextView
-import androidx.activity.ComponentActivity
 import com.bootlauncher.R
 import com.bootlauncher.service.AppLaunchService
 import com.bootlauncher.util.FileLogger
 import java.util.concurrent.atomic.AtomicBoolean
 
-class LauncherActivity : ComponentActivity() {
+class LauncherActivity : Activity() {
 
-    private val hasLaunched = AtomicBoolean(false)
+    private var lastIntentHash = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,15 +30,19 @@ class LauncherActivity : ComponentActivity() {
         startLaunchService()
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         FileLogger.d("LauncherActivity", "onNewIntent")
-        hasLaunched.set(false)
+        lastIntentHash = intent.hashCode()
     }
 
     private fun startLaunchService() {
-        if (!hasLaunched.compareAndSet(false, true)) {
-            FileLogger.d("LauncherActivity", "Already launched, skipping")
+        FileLogger.d("LauncherActivity", "startLaunchService, lastIntentHash=$lastIntentHash")
+        if (lastIntentHash != 0) {
+            lastIntentHash = 0
+            FileLogger.d("LauncherActivity", "New intent detected, launching apps")
+        } else {
+            FileLogger.d("LauncherActivity", "No new intent, skipping")
             return
         }
         FileLogger.d("LauncherActivity", "Starting AppLaunchService")

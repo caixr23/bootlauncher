@@ -91,25 +91,39 @@ fun requestDefaultLauncher(context: Context) {
         try {
             val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? android.app.role.RoleManager
             if (roleManager?.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME) == true) {
-                val intent = roleManager.createRequestRoleIntent(android.app.role.RoleManager.ROLE_HOME)
-                (context as? ComponentActivity)?.startActivityForResult(intent, REQUEST_CODE_SET_LAUNCHER)
-                return
+                if (roleManager.isRoleHeld(android.app.role.RoleManager.ROLE_HOME)) {
+                    FileLogger.d("Launcher", "Already home role, trying app details")
+                } else {
+                    val intent = roleManager.createRequestRoleIntent(android.app.role.RoleManager.ROLE_HOME)
+                    (context as? ComponentActivity)?.startActivityForResult(intent, REQUEST_CODE_SET_LAUNCHER)
+                    return
+                }
             }
         } catch (e: Exception) {
-            FileLogger.w("Launcher", "RoleManager failed, fallback to settings", e)
+            FileLogger.w("Launcher", "RoleManager failed", e)
         }
     }
-    try {
-        val intent = Intent(Settings.ACTION_HOME_SETTINGS)
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        FileLogger.w("Launcher", "ACTION_HOME_SETTINGS failed, fallback to default apps", e)
+    val intents = listOf(
+        Intent(Settings.ACTION_HOME_SETTINGS),
+        Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS),
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = "package:${context.packageName}"
+        },
+        Intent("android.settings.APPLICATION_DETAILS_SETTINGS").apply {
+            data = "package:${context.packageName}"
+        }
+    )
+    for (intent in intents) {
         try {
-            context.startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
-        } catch (e2: Exception) {
-            Toast.makeText(context, "Cannot open launcher settings", Toast.LENGTH_SHORT).show()
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            FileLogger.d("Launcher", "Opened settings: ${intent.action} ${intent.data}")
+            return
+        } catch (e: Exception) {
+            FileLogger.w("Launcher", "Failed to open: ${intent.action}", e)
         }
     }
+    Toast.makeText(context, "Cannot open launcher settings", Toast.LENGTH_SHORT).show()
 }
 
 private const val REQUEST_CODE_SET_LAUNCHER = 1001
