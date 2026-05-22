@@ -87,12 +87,31 @@ fun isDefaultLauncher(context: Context): Boolean {
 }
 
 fun requestDefaultLauncher(context: Context) {
+    // Method 1: pm shell command (works on most devices including Huawei/Honor)
+    val pkg = context.packageName
+    val component = "$pkg/.ui.launcher.LauncherActivity"
+    try {
+        val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "pm set-home-activity $component"))
+        val output = process.inputStream.bufferedReader().readText().trim()
+        val exitCode = process.waitFor()
+        FileLogger.d("Launcher", "pm set-home-activity: exit=$exitCode, output=$output")
+        if (exitCode == 0) {
+            Toast.makeText(context, "已设置为默认桌面，请重启设备生效", Toast.LENGTH_LONG).show()
+            return
+        }
+    } catch (e: Exception) {
+        FileLogger.w("Launcher", "pm command failed", e)
+    }
+
+    // Method 2: RoleManager
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         try {
             val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? android.app.role.RoleManager
             if (roleManager?.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME) == true) {
                 if (roleManager.isRoleHeld(android.app.role.RoleManager.ROLE_HOME)) {
-                    FileLogger.d("Launcher", "Already home role, trying app details")
+                    FileLogger.d("Launcher", "Already home role")
+                    Toast.makeText(context, "已经是默认桌面", Toast.LENGTH_SHORT).show()
+                    return
                 } else {
                     val intent = roleManager.createRequestRoleIntent(android.app.role.RoleManager.ROLE_HOME)
                     (context as? ComponentActivity)?.startActivityForResult(intent, REQUEST_CODE_SET_LAUNCHER)
@@ -103,27 +122,27 @@ fun requestDefaultLauncher(context: Context) {
             FileLogger.w("Launcher", "RoleManager failed", e)
         }
     }
+
+    // Method 3: Open system settings
     val intents = listOf(
+        Intent("android.settings.HOME_SETTINGS"),
         Intent(Settings.ACTION_HOME_SETTINGS),
         Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS),
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = Uri.parse("package:${context.packageName}")
-        },
-        Intent("android.settings.APPLICATION_DETAILS_SETTINGS").apply {
-            data = Uri.parse("package:${context.packageName}")
+            data = Uri.parse("package:$pkg")
         }
     )
     for (intent in intents) {
         try {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-            FileLogger.d("Launcher", "Opened settings: ${intent.action} ${intent.data}")
+            FileLogger.d("Launcher", "Opened settings: ${intent.action}")
             return
         } catch (e: Exception) {
             FileLogger.w("Launcher", "Failed to open: ${intent.action}", e)
         }
     }
-    Toast.makeText(context, "Cannot open launcher settings", Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, "无法打开设置，请手动在系统设置中设置默认桌面", Toast.LENGTH_LONG).show()
 }
 
 private const val REQUEST_CODE_SET_LAUNCHER = 1001
