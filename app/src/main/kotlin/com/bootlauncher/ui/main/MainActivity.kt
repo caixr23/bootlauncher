@@ -21,6 +21,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import android.graphics.BitmapFactory
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -410,8 +414,31 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
                 FileLogger.d("MainActivity", "items(apps) start, count=${apps.size}")
                 items(apps, key = { it.id }) { app ->
                     FileLogger.d("MainActivity", "AppListItem item: id=${app.id}, pkg=${app.packageName}")
+                    val iconBitmap = remember(app.packageName) {
+                        try {
+                            val drawable = pmHelper.context.packageManager.getApplicationIcon(app.packageName)
+                            val bmp = android.graphics.Bitmap.createScaledBitmap(
+                                drawable.toBitmap(), 96, 96, true
+                            )
+                            bmp.asImageBitmap()
+                        } catch (e: Exception) {
+                            FileLogger.w("MainActivity", "Icon load failed for ${app.packageName}", e)
+                            null
+                        }
+                    }
                     AppListItem(
                         app = app,
+                        icon = iconBitmap,
+                        onLaunchClick = {
+                            try {
+                                val intent = pmHelper.context.packageManager
+                                    .getLaunchIntentForPackage(app.packageName)
+                                intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                pmHelper.context.startActivity(intent)
+                            } catch (e: Exception) {
+                                FileLogger.e("MainActivity", "Launch failed for ${app.packageName}", e)
+                            }
+                        },
                         onEnabledChange = { enabled -> viewModel.updateEnabled(app, enabled) },
                         onDelayClick = { showDelayDialog = app },
                         onDelete = { viewModel.removeApp(app) }
