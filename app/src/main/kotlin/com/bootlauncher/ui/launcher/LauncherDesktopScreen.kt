@@ -9,13 +9,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,7 +28,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,7 +38,6 @@ import com.bootlauncher.ui.main.MainActivity
 import com.bootlauncher.util.FileLogger
 
 private const val MAX_DESKTOP_SLOTS = 20
-private const val MAX_APPS = 15
 
 @Composable
 fun LauncherDesktopScreen(
@@ -65,11 +64,7 @@ fun LauncherDesktopScreen(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        items(
-            items = desktopItems,
-            key = { it.key },
-            span = { GridItemSpan(1) }
-        ) { item ->
+        items(desktopItems) { item ->
             when (item) {
                 is DesktopItem.App -> AppGridItem(
                     app = item.app,
@@ -170,7 +165,7 @@ private fun SettingsGridItem(onClick: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = androidx.compose.material.icons.filled.Settings,
+                imageVector = Icons.Filled.Settings,
                 contentDescription = "Settings",
                 tint = Color.White,
                 modifier = Modifier.size(40.dp)
@@ -207,13 +202,7 @@ private fun launchApp(context: Context, packageName: String) {
 }
 
 private sealed class DesktopItem {
-    data class App(val app: AppEntity) : DesktopItem() {
-        override val key: String = "app_${app.packageName}"
-    }
-    object Settings : DesktopItem() {
-        override val key: String = "settings"
-    }
-    object Empty : DesktopItem() {
-        override val key: String get() = "empty_${hashCode()}"
-    }
+    data class App(val app: AppEntity) : DesktopItem()
+    object Settings : DesktopItem()
+    object Empty : DesktopItem()
 }
