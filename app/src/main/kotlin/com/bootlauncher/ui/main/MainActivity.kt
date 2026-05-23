@@ -227,7 +227,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
     }
 
     val configuredPackages = remember(apps) { apps.map { it.packageName }.toSet() }
-    val desktopCount = remember(apps) { apps.count { it.enabled && it.showOnDesktop } }
+    val desktopCount = remember(apps) { apps.count { it.showOnDesktop } }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     FileLogger.d("MainActivity", "step9 - Scaffold start")
