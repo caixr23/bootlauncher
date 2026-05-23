@@ -7,6 +7,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 
@@ -20,9 +22,10 @@ class LauncherActivity : ComponentActivity() {
         window.statusBarColor = android.graphics.Color.BLACK
         window.navigationBarColor = android.graphics.Color.BLACK
         setContent {
+            val apps by viewModel.desktopApps.collectAsState()
             androidx.compose.material3.MaterialTheme {
                 LauncherDesktopScreen(
-                    apps = viewModel.desktopApps.value,
+                    apps = apps,
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Color.Black)
