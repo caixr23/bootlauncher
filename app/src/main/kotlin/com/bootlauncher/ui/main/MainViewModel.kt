@@ -13,8 +13,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.stateIn
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -115,5 +115,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 repository.updateOrder(app.id, index)
             }
         }
+    }
+
+    fun updateShowOnDesktop(app: AppEntity, show: Boolean) {
+        viewModelScope.launch {
+            if (show) {
+                val currentCount = repository.desktopAppCount()
+                if (currentCount >= MAX_DESKTOP_APPS) {
+                    FileLogger.d("MainViewModel", "Max desktop apps reached: $currentCount")
+                    return@launch
+                }
+            }
+            repository.update(app.copy(showOnDesktop = show))
+        }
+    }
+
+    companion object {
+        const val MAX_DESKTOP_APPS = 15
     }
 }

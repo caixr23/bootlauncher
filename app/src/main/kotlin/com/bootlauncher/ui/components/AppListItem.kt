@@ -15,6 +15,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -31,6 +32,7 @@ fun AppListItem(
     icon: ImageBitmap?,
     onLaunchClick: () -> Unit,
     onEnabledChange: (Boolean) -> Unit,
+    onShowOnDesktopChange: ((Boolean) -> Unit)?,
     onDelayClick: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
@@ -81,6 +83,21 @@ fun AppListItem(
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.clickable { onDelayClick() }
                 )
+                if (onShowOnDesktopChange != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Text(
+                            text = "Desktop",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Switch(
+                            checked = app.showOnDesktop,
+                            onCheckedChange = onShowOnDesktopChange
+                        )
+                    }
+                }
             }
             Checkbox(checked = app.enabled, onCheckedChange = onEnabledChange)
             IconButton(onClick = onDelete) {

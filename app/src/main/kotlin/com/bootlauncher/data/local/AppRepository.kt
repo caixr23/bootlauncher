@@ -30,4 +30,10 @@ class AppRepository(
     suspend fun getLogsForBoot(bootTime: Long): List<LaunchLog> = launchLogDao.getLogsForBoot(bootTime)
 
     suspend fun getRecentLogs(limit: Int = 50): List<LaunchLog> = launchLogDao.getRecentLogs(limit)
+
+    fun getDesktopApps(): Flow<List<AppEntity>> = appDao.getDesktopApps()
+
+    suspend fun getDesktopAppsOnce(): List<AppEntity> = appDao.getDesktopAppsOnce()
+
+    suspend fun desktopAppCount(): Int = appDao.desktopAppCount()
 }

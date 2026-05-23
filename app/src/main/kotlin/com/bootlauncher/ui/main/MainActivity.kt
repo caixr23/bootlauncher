@@ -227,6 +227,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
     }
 
     val configuredPackages = remember(apps) { apps.map { it.packageName }.toSet() }
+    val desktopCount = remember(apps) { apps.count { it.enabled && it.showOnDesktop } }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     FileLogger.d("MainActivity", "step9 - Scaffold start")
@@ -237,6 +238,15 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
                 title = { Text("BootLauncher Manager") },
                 scrollBehavior = scrollBehavior,
                 actions = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(
+                            "Desktop: $desktopCount/${MainViewModel.MAX_DESKTOP_APPS}",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(end = 16.dp)
@@ -477,6 +487,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
                             }
                         },
                         onEnabledChange = { enabled -> viewModel.updateEnabled(app, enabled) },
+                        onShowOnDesktopChange = { show -> viewModel.updateShowOnDesktop(app, show) },
                         onDelayClick = { showDelayDialog = app },
                         onDelete = { viewModel.removeApp(app) }
                     )

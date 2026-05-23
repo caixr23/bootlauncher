@@ -33,6 +33,7 @@
             android:launchMode="singleTask"
             android:stateNotNeeded="true"
             android:clearTaskOnLaunch="true"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:theme="@style/Theme.BootLauncher">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

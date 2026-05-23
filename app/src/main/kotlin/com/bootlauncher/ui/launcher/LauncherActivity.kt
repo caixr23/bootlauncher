@@ -1,53 +1,33 @@
 package com.bootlauncher.ui.launcher
 
-import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
-import android.widget.TextView
-import com.bootlauncher.R
-import com.bootlauncher.service.AppLaunchService
-import com.bootlauncher.util.FileLogger
-import java.util.concurrent.atomic.AtomicBoolean
+import android.view.WindowManager
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 
-class LauncherActivity : Activity() {
+class LauncherActivity : ComponentActivity() {
 
-    private var lastIntentHash = 0
+    private val viewModel: LauncherViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(TextView(this).apply {
-            text = getString(R.string.launcher_message)
-            textSize = 24f
-            setTextAlignment(android.view.View.TEXT_ALIGNMENT_CENTER)
-        })
-
-        startLaunchService()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        FileLogger.d("LauncherActivity", "onResume")
-        startLaunchService()
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        FileLogger.d("LauncherActivity", "onNewIntent")
-        lastIntentHash = intent.hashCode()
-    }
-
-    private fun startLaunchService() {
-        FileLogger.d("LauncherActivity", "startLaunchService, lastIntentHash=$lastIntentHash")
-        if (lastIntentHash != 0) {
-            lastIntentHash = 0
-            FileLogger.d("LauncherActivity", "New intent detected, launching apps")
-        } else {
-            FileLogger.d("LauncherActivity", "No new intent, skipping")
-            return
+        window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+        window.statusBarColor = android.graphics.Color.BLACK
+        window.navigationBarColor = android.graphics.Color.BLACK
+        setContent {
+            androidx.compose.material3.MaterialTheme {
+                LauncherDesktopScreen(
+                    apps = viewModel.desktopApps.value,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                )
+            }
         }
-        FileLogger.d("LauncherActivity", "Starting AppLaunchService")
-        val intent = Intent(this, AppLaunchService::class.java)
-        intent.putExtra("boot_time", System.currentTimeMillis())
-        startForegroundService(intent)
     }
 }

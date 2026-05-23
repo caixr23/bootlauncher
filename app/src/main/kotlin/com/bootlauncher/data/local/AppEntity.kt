@@ -10,5 +10,6 @@ data class AppEntity(
     val label: String,
     val delayMs: Long = 0,
     val sortOrder: Int = 0,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    val showOnDesktop: Boolean = false
 )
