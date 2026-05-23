@@ -7,10 +7,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.content.Context
-import com.bootlauncher.service.AppLaunchService
 import android.os.PowerManager
 import android.provider.Settings
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,7 +22,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import android.graphics.BitmapFactory
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,7 +33,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -46,7 +42,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -87,14 +82,12 @@ fun isDefaultLauncher(context: Context): Boolean {
 }
 
 fun requestDefaultLauncher(context: Context) {
-    // Method 1: pm shell command (works on most devices including Huawei/Honor)
     val pkg = context.packageName
     val component = "$pkg/.ui.launcher.LauncherActivity"
     try {
         val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "pm set-home-activity $component"))
-        val output = process.inputStream.bufferedReader().readText().trim()
+        process.inputStream.bufferedReader().readText().trim()
         val exitCode = process.waitFor()
-        FileLogger.d("Launcher", "pm set-home-activity: exit=$exitCode, output=$output")
         if (exitCode == 0) {
             Toast.makeText(context, "已设置为默认桌面，请重启设备生效", Toast.LENGTH_LONG).show()
             return
@@ -103,13 +96,11 @@ fun requestDefaultLauncher(context: Context) {
         FileLogger.w("Launcher", "pm command failed", e)
     }
 
-    // Method 2: RoleManager
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         try {
             val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? android.app.role.RoleManager
             if (roleManager?.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME) == true) {
                 if (roleManager.isRoleHeld(android.app.role.RoleManager.ROLE_HOME)) {
-                    FileLogger.d("Launcher", "Already home role")
                     Toast.makeText(context, "已经是默认桌面", Toast.LENGTH_SHORT).show()
                     return
                 } else {
@@ -123,7 +114,6 @@ fun requestDefaultLauncher(context: Context) {
         }
     }
 
-    // Method 3: Open system settings
     val intents = listOf(
         Intent("android.settings.HOME_SETTINGS"),
         Intent(Settings.ACTION_HOME_SETTINGS),
@@ -136,7 +126,6 @@ fun requestDefaultLauncher(context: Context) {
         try {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
-            FileLogger.d("Launcher", "Opened settings: ${intent.action}")
             return
         } catch (e: Exception) {
             FileLogger.w("Launcher", "Failed to open: ${intent.action}", e)
@@ -156,18 +145,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        FileLogger.d("MainActivity", "onCreate start")
         try {
             pmHelper = PackageManagerHelper(this)
-            FileLogger.d("MainActivity", "pmHelper created")
             setContent {
-                FileLogger.d("MainActivity", "setContent lambda entered")
                 BootLauncherTheme {
-                    FileLogger.d("MainActivity", "BootLauncherTheme lambda entered")
                     MainScreen(viewModel, pmHelper)
                 }
             }
-            FileLogger.d("MainActivity", "setContent returned")
         } catch (e: Exception) {
             FileLogger.e("MainActivity", "onCreate failed", e)
         }
@@ -177,23 +161,17 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
-    FileLogger.d("MainActivity", "step1 - collectAsState apps")
     val apps by viewModel.apps.collectAsState()
-    FileLogger.d("MainActivity", "step2 - collectAsState others")
     val autoStartEnabled by viewModel.autoStartEnabled.collectAsState()
     val latestBootTime by viewModel.latestBootTime.collectAsState()
     val bootLogs by viewModel.bootLogs.collectAsState()
-    FileLogger.d("MainActivity", "step3 - remember states")
     var showAppPicker by remember { mutableStateOf(false) }
     var showDelayDialog by remember { mutableStateOf<AppEntity?>(null) }
     var showLogsExpanded by remember { mutableStateOf(false) }
     var checkResults by remember { mutableStateOf<List<CheckResult>>(emptyList()) }
 
-    FileLogger.d("MainActivity", "step4 - LocalContext")
     val context = LocalContext.current
-    FileLogger.d("MainActivity", "step5 - isDefaultLauncher check")
     var isDefaultLauncher by remember { mutableStateOf(isDefaultLauncher(context)) }
-    FileLogger.d("MainActivity", "step6 - permission check")
     val notificationPermissionGranted = remember {
         mutableStateOf(
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
@@ -203,15 +181,12 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
         )
     }
 
-    FileLogger.d("MainActivity", "step7 - permissionLauncher")
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         notificationPermissionGranted.value = granted
-        FileLogger.d("MainActivity", "Notification permission: $granted")
     }
 
-    FileLogger.d("MainActivity", "step8 - LaunchedEffect")
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -227,7 +202,6 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
     val desktopCount = remember(apps) { apps.count { it.showOnDesktop } }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    FileLogger.d("MainActivity", "step9 - Scaffold start")
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -258,15 +232,11 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                FileLogger.d("MainActivity", "FAB clicked, opening app picker")
-                showAppPicker = true
-            }) {
+            FloatingActionButton(onClick = { showAppPicker = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add App")
             }
         }
     ) { padding ->
-        FileLogger.d("MainActivity", "step10 - LazyColumn start")
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -275,7 +245,6 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
-                FileLogger.d("MainActivity", "lazyitem: diagnose button")
                 Button(
                     onClick = { checkResults = runDiagnostics(context) },
                     modifier = Modifier.fillMaxWidth()
@@ -287,7 +256,6 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
 
             if (checkResults.isNotEmpty()) {
                 item {
-                    FileLogger.d("MainActivity", "lazyitem: checkResults card")
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
@@ -321,7 +289,6 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
 
             if (!notificationPermissionGranted.value) {
                 item {
-                    FileLogger.d("MainActivity", "lazyitem: notification permission card")
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
@@ -348,7 +315,6 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
             }
 
             item {
-                FileLogger.d("MainActivity", "lazyitem: battery optimization button")
                 TextButton(
                     onClick = {
                         try {
@@ -379,7 +345,6 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
             }
 
             item {
-                FileLogger.d("MainActivity", "lazyitem: launcher status card")
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -428,7 +393,6 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
 
             if (latestBootTime != null) {
                 item {
-                    FileLogger.d("MainActivity", "lazyitem: BootTimeCard")
                     BootTimeCard(
                         bootTime = latestBootTime!!,
                         logs = bootLogs,
@@ -438,10 +402,8 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
                 }
             }
 
-            FileLogger.d("MainActivity", "step11 - apps list, size=${apps.size}")
             if (apps.isEmpty()) {
                 item {
-                    FileLogger.d("MainActivity", "lazyitem: empty apps placeholder")
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -455,9 +417,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
                     }
                 }
             } else {
-                FileLogger.d("MainActivity", "items(apps) start, count=${apps.size}")
                 items(apps, key = { it.id }) { app ->
-                    FileLogger.d("MainActivity", "AppListItem item: id=${app.id}, pkg=${app.packageName}")
                     val iconBitmap = remember(app.packageName) {
                         try {
                             val drawable = pmHelper.context.packageManager.getApplicationIcon(app.packageName)
@@ -493,20 +453,15 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
 
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
-        FileLogger.d("MainActivity", "step12 - LazyColumn done")
-        FileLogger.d("MainActivity", "step13 - after LazyColumn, showAppPicker=$showAppPicker")
     }
 
     if (showAppPicker) {
-        FileLogger.d("MainActivity", "showAppPicker=true, loading installed apps")
         val installedApps = remember(configuredPackages) {
             pmHelper.getInstalledApps(setOf("com.bootlauncher") + configuredPackages)
         }
-        FileLogger.d("MainActivity", "AppPickerSheet composing with ${installedApps.size} apps")
         AppPickerSheet(
             installedApps = installedApps,
             onAppSelected = { installedApp ->
-                FileLogger.d("MainActivity", "App selected: ${installedApp.packageName}")
                 viewModel.addApp(installedApp.packageName, installedApp.label)
                 showAppPicker = false
             },
@@ -514,9 +469,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
         )
     }
 
-    FileLogger.d("MainActivity", "step14 - showDelayDialog=$showDelayDialog")
     showDelayDialog?.let { app ->
-        FileLogger.d("MainActivity", "step15 - DelayPickerDialog composing")
         DelayPickerDialog(
             currentDelaySeconds = (app.delayMs / 1000).toInt(),
             onSave = { newDelayMs ->
@@ -533,16 +486,13 @@ private fun runDiagnostics(context: Context): List<CheckResult> {
     val pm = context.packageManager
     val pkg = context.packageName
 
-    // 0. Default launcher check
     val isHome = isDefaultLauncher(context)
     results.add(CheckResult(
         "Default Launcher",
         isHome,
         if (isHome) "Is the default home screen" else "NOT set as default launcher (tap the button above to set)"
     ))
-    FileLogger.d("Diag", "Default launcher: $isHome")
 
-    // 1. Notification permission
     val notifGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     } else true
@@ -551,9 +501,7 @@ private fun runDiagnostics(context: Context): List<CheckResult> {
         notifGranted,
         if (notifGranted) "Granted" else "Denied (POST_NOTIFICATIONS)"
     ))
-    FileLogger.d("Diag", "Notification: $notifGranted")
 
-    // 2. Battery optimization whitelist
     val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
     val ignoringBattery = powerManager.isIgnoringBatteryOptimizations(pkg)
     results.add(CheckResult(
@@ -561,9 +509,7 @@ private fun runDiagnostics(context: Context): List<CheckResult> {
         ignoringBattery,
         if (ignoringBattery) "Whitelisted" else "Not whitelisted (may be killed by system)"
     ))
-    FileLogger.d("Diag", "Battery whitelist: $ignoringBattery")
 
-    // 3. Boot receiver registered
     val bootReceiver = try {
         val receiverInfo = pm.getReceiverInfo(
             android.content.ComponentName(pkg, "com.bootlauncher.receiver.BootReceiver"),
@@ -579,18 +525,14 @@ private fun runDiagnostics(context: Context): List<CheckResult> {
         bootReceiver,
         if (bootReceiver) "Enabled, will receive BOOT_COMPLETED" else "NOT registered or disabled"
     ))
-    FileLogger.d("Diag", "BootReceiver enabled: $bootReceiver")
 
-    // 4. Auto-start enabled
     val autoStart = BootLauncherApp.isAutoStartEnabled(context)
     results.add(CheckResult(
         "Auto-start Enabled",
         autoStart,
         if (autoStart) "Will launch apps on boot" else "Disabled in settings"
     ))
-    FileLogger.d("Diag", "Auto-start enabled: $autoStart")
 
-    // 5. Foreground service type declared
     val serviceType = try {
         val info = pm.getServiceInfo(
             android.content.ComponentName(pkg, "com.bootlauncher.service.AppLaunchService"),
@@ -607,9 +549,7 @@ private fun runDiagnostics(context: Context): List<CheckResult> {
         hasSpecialUse,
         if (hasSpecialUse) "SPECIAL_USE declared" else "Missing SPECIAL_USE type (Android 14+ will fail)"
     ))
-    FileLogger.d("Diag", "Foreground service type: specialUse=$hasSpecialUse")
 
-    // 6. QUERY_ALL_PACKAGES effectiveness
     val installedCount = try {
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
@@ -625,9 +565,7 @@ private fun runDiagnostics(context: Context): List<CheckResult> {
         queryOk,
         if (queryOk) "Found $installedCount launchable apps" else "Cannot query apps (set as default launcher first)"
     ))
-    FileLogger.d("Diag", "Installed apps query: count=$installedCount")
 
-    // 7. File logger accessible
     val logFile = FileLogger.getLogFile()
     val logOk = logFile != null && logFile.parentFile?.exists() == true
     results.add(CheckResult(
@@ -635,7 +573,6 @@ private fun runDiagnostics(context: Context): List<CheckResult> {
         logOk,
         if (logOk) "Path: ${logFile?.absolutePath}" else "Log directory not accessible"
     ))
-    FileLogger.d("Diag", "Log file: ${logFile?.absolutePath}")
 
     return results
 }

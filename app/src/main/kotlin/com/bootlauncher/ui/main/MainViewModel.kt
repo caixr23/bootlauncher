@@ -21,11 +21,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: AppRepository
 
     init {
-        FileLogger.d("MainViewModel", "init: getting database")
         val db = AppDatabase.getDatabase(application)
-        FileLogger.d("MainViewModel", "init: database obtained")
         repository = AppRepository(db.appDao(), db.launchLogDao())
-        FileLogger.d("MainViewModel", "init: repository created")
     }
 
     val apps: StateFlow<List<AppEntity>> = repository.getAllApps()
@@ -61,21 +58,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addApp(packageName: String, label: String) {
-        FileLogger.d("MainViewModel", "addApp called: packageName=$packageName, label=$label")
         viewModelScope.launch {
             try {
                 val currentApps = repository.getAllApps().first()
                 val nextSortOrder = currentApps.size
-                val entity = AppEntity(
+                repository.insert(AppEntity(
                     packageName = packageName,
                     label = label,
                     sortOrder = nextSortOrder,
                     enabled = true
-                )
-                FileLogger.d("MainViewModel", "inserting entity: $entity")
-                repository.insert(entity)
-                val updatedApps = repository.getAllApps().first()
-                FileLogger.d("MainViewModel", "after insert, total apps: ${updatedApps.size}")
+                ))
             } catch (e: Exception) {
                 FileLogger.e("MainViewModel", "addApp failed for $packageName", e)
             }
@@ -122,7 +114,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (show) {
                 val currentCount = repository.desktopAppCount()
                 if (currentCount >= MAX_DESKTOP_APPS) {
-                    FileLogger.d("MainViewModel", "Max desktop apps reached: $currentCount")
                     return@launch
                 }
             }

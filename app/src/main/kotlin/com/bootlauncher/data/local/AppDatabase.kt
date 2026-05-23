@@ -6,7 +6,6 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.bootlauncher.util.FileLogger
 
 @Database(
     entities = [AppEntity::class, LaunchLog::class],
@@ -43,20 +42,15 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         fun getDatabase(context: Context): AppDatabase {
-            FileLogger.d("AppDatabase", "getDatabase called")
             return INSTANCE ?: synchronized(this) {
-                FileLogger.d("AppDatabase", "building database")
-                val db = Room.databaseBuilder(
+                Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     "bootlauncher.db"
                 )
                     .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
-                FileLogger.d("AppDatabase", "database built, getting DAOs")
-                val result = db.also { INSTANCE = it }
-                FileLogger.d("AppDatabase", "getDatabase returning")
-                result
+                    .also { INSTANCE = it }
             }
         }
     }

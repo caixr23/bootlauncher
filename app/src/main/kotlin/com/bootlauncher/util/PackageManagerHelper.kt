@@ -3,7 +3,6 @@ package com.bootlauncher.util
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import com.bootlauncher.util.FileLogger
 
 data class InstalledApp(
     val packageName: String,
@@ -19,14 +18,12 @@ class PackageManagerHelper(val context: Context) {
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
-        FileLogger.d("PackageManagerHelper", "queryIntentActivities start, exclude: $excludePackageNames")
         val resolveInfos = try {
             pm.queryIntentActivities(intent, PackageManager.MATCH_ALL)
         } catch (e: Exception) {
             FileLogger.e("PackageManagerHelper", "queryIntentActivities failed", e)
             return emptyList()
         }
-        FileLogger.d("PackageManagerHelper", "queryIntentActivities returned ${resolveInfos.size} results")
         return resolveInfos
             .filter { it.activityInfo.packageName !in excludePackageNames }
             .distinctBy { it.activityInfo.packageName }
@@ -44,7 +41,6 @@ class PackageManagerHelper(val context: Context) {
                     icon = icon
                 )
             }
-            .also { FileLogger.d("PackageManagerHelper", "getInstalledApps returning ${it.size} apps") }
             .sortedBy { it.label.lowercase() }
     }
 
