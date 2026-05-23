@@ -18,7 +18,9 @@ class LauncherActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+        // FLAG_SHOW_WHEN_LOCKED: 在锁屏界面之上显示 Activity，会跳过系统锁屏。
+        // 如果需要锁屏功能，取消注释下面这行；不需要锁屏则保持注释。
+        // window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
         window.statusBarColor = android.graphics.Color.BLACK
         window.navigationBarColor = android.graphics.Color.BLACK
         setContent {
