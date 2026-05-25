@@ -1,5 +1,6 @@
 package com.bootlauncher.ui.launcher
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -12,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.bootlauncher.BootLauncherApp
+import com.bootlauncher.util.FileLogger
 
 class LauncherActivity : ComponentActivity() {
 
@@ -34,6 +36,36 @@ class LauncherActivity : ComponentActivity() {
                         .background(Color.Black)
                 )
             }
+        }
+        handleLaunchIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleLaunchIntent(intent)
+    }
+
+    private fun handleLaunchIntent(intent: Intent?) {
+        if (intent?.action == "com.bootlauncher.LAUNCH_APP") {
+            val packageName = intent.getStringExtra("package_name")
+            if (packageName != null) {
+                FileLogger.d("LauncherActivity", "Received LAUNCH_APP intent: $packageName")
+                launchApp(packageName)
+            }
+        }
+    }
+
+    private fun launchApp(packageName: String) {
+        try {
+            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(launchIntent)
+            } else {
+                FileLogger.e("LauncherActivity", "No launch intent for: $packageName")
+            }
+        } catch (e: Exception) {
+            FileLogger.e("LauncherActivity", "Failed to launch $packageName", e)
         }
     }
 }

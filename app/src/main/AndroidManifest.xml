@@ -40,6 +40,9 @@
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="com.bootlauncher.LAUNCH_APP" />
+            </intent-filter>
         </activity>
 
         <receiver
