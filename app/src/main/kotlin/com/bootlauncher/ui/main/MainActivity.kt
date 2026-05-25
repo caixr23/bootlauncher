@@ -188,6 +188,10 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
         notificationPermissionGranted.value = granted
     }
 
+    val phonePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -196,6 +200,12 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
             ) {
                 permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
+        }
+        if (ContextCompat.checkSelfPermission(
+                context, Manifest.permission.READ_PHONE_STATE
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            phonePermissionLauncher.launch(Manifest.permission.READ_PHONE_STATE)
         }
     }
 

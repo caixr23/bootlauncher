@@ -1,7 +1,13 @@
 package com.bootlauncher.ui.launcher
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.telephony.PhoneStateListener
+import android.telephony.TelephonyManager
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,12 +18,21 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.core.content.ContextCompat
 import com.bootlauncher.BootLauncherApp
+import com.bootlauncher.service.AppLaunchService
 import com.bootlauncher.util.FileLogger
 
 class LauncherActivity : ComponentActivity() {
 
     private val viewModel: LauncherViewModel by viewModels()
+    private val handler = Handler(Looper.getMainLooper())
+    private val relaunchRunnable = Runnable {
+        FileLogger.d("PhoneCall", "Relaunching apps after call")
+        val intent = Intent(this, AppLaunchService::class.java)
+        intent.putExtra("boot_time", System.currentTimeMillis())
+        startForegroundService(intent)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,11 +53,58 @@ class LauncherActivity : ComponentActivity() {
             }
         }
         handleLaunchIntent(intent)
+        registerPhoneCallListener()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacks(relaunchRunnable)
+        try {
+            val tm = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+            tm.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE)
+        } catch (e: Exception) {
+            FileLogger.w("PhoneCall", "Failed to unregister listener", e)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleLaunchIntent(intent)
+    }
+
+    private fun registerPhoneCallListener() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            FileLogger.d("PhoneCall", "READ_PHONE_STATE not granted, skipping")
+            return
+        }
+        try {
+            val tm = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
+            tm.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
+            FileLogger.d("PhoneCall", "PhoneStateListener registered")
+        } catch (e: Exception) {
+            FileLogger.e("PhoneCall", "Failed to register PhoneStateListener", e)
+        }
+    }
+
+    private val phoneStateListener = object : PhoneStateListener() {
+        override fun onCallStateChanged(state: Int, phoneNumber: String?) {
+            when (state) {
+                TelephonyManager.CALL_STATE_RINGING -> {
+                    FileLogger.d("PhoneCall", "Incoming call detected, canceling any pending relaunch")
+                    handler.removeCallbacks(relaunchRunnable)
+                }
+                TelephonyManager.CALL_STATE_OFFHOOK -> {
+                    FileLogger.d("PhoneCall", "Call answered")
+                }
+                TelephonyManager.CALL_STATE_IDLE -> {
+                    FileLogger.d("PhoneCall", "Call ended, scheduling relaunch in 30s")
+                    handler.removeCallbacks(relaunchRunnable)
+                    handler.postDelayed(relaunchRunnable, 30_000)
+                }
+            }
+        }
     }
 
     private fun handleLaunchIntent(intent: Intent?) {
