@@ -163,6 +163,7 @@ class MainActivity : ComponentActivity() {
 fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
     val apps by viewModel.apps.collectAsState()
     val autoStartEnabled by viewModel.autoStartEnabled.collectAsState()
+    val showWhenLocked by viewModel.showWhenLocked.collectAsState()
     val latestBootTime by viewModel.latestBootTime.collectAsState()
     val bootLogs by viewModel.bootLogs.collectAsState()
     var showAppPicker by remember { mutableStateOf(false) }
@@ -388,6 +389,29 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
                             }
                         }
                     }
+                }
+            }
+
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Show on Lock Screen", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "Skip lock screen, show desktop directly",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                    Switch(
+                        checked = showWhenLocked,
+                        onCheckedChange = { viewModel.setShowWhenLocked(it) }
+                    )
                 }
             }
 

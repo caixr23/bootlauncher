@@ -17,6 +17,17 @@ class BootLauncherApp : Application() {
     companion object {
         private const val PREFS_NAME = "bootlauncher_prefs"
         private const val KEY_AUTO_START_ENABLED = "auto_start_enabled"
+        private const val KEY_SHOW_WHEN_LOCKED = "show_when_locked"
+
+        fun isShowWhenLocked(context: Context): Boolean {
+            return context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getBoolean(KEY_SHOW_WHEN_LOCKED, false)
+        }
+
+        fun setShowWhenLocked(context: Context, enabled: Boolean) {
+            context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit().putBoolean(KEY_SHOW_WHEN_LOCKED, enabled).apply()
+        }
 
         fun isAutoStartEnabled(context: Context): Boolean {
             return context.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)

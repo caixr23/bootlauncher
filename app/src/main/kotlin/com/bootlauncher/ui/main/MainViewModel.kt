@@ -57,6 +57,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         autoStartEnabled.value = enabled
     }
 
+    val showWhenLocked: MutableStateFlow<Boolean> = MutableStateFlow(
+        BootLauncherApp.isShowWhenLocked(application)
+    )
+
+    fun setShowWhenLocked(enabled: Boolean) {
+        BootLauncherApp.setShowWhenLocked(getApplication(), enabled)
+        showWhenLocked.value = enabled
+    }
+
     fun addApp(packageName: String, label: String) {
         viewModelScope.launch {
             try {
