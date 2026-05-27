@@ -37,10 +37,10 @@ interface AppDao {
     @Query("SELECT COUNT(*) FROM apps")
     suspend fun count(): Int
 
-    @Query("SELECT * FROM apps WHERE showOnDesktop = 1 ORDER BY sortOrder ASC LIMIT 15")
+    @Query("SELECT * FROM apps WHERE showOnDesktop = 1 ORDER BY sortOrder ASC LIMIT 19")
     fun getDesktopApps(): Flow<List<AppEntity>>
 
-    @Query("SELECT * FROM apps WHERE showOnDesktop = 1 ORDER BY sortOrder ASC LIMIT 15")
+    @Query("SELECT * FROM apps WHERE showOnDesktop = 1 ORDER BY sortOrder ASC LIMIT 19")
     suspend fun getDesktopAppsOnce(): List<AppEntity>
 
     @Query("SELECT COUNT(*) FROM apps WHERE showOnDesktop = 1")

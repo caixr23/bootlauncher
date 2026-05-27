@@ -225,7 +225,7 @@ fun MainScreen(viewModel: MainViewModel, pmHelper: PackageManagerHelper) {
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
                         Text(
-                            "Desktop: $desktopCount/${MainViewModel.MAX_DESKTOP_APPS}",
+                            "Desktop: $desktopCount/19",
                             style = MaterialTheme.typography.labelSmall
                         )
                     }

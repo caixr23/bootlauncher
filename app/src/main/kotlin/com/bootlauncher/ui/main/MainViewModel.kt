@@ -120,17 +120,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateShowOnDesktop(app: AppEntity, show: Boolean) {
         viewModelScope.launch {
-            if (show) {
-                val currentCount = repository.desktopAppCount()
-                if (currentCount >= MAX_DESKTOP_APPS) {
-                    return@launch
-                }
-            }
             repository.update(app.copy(showOnDesktop = show))
         }
-    }
-
-    companion object {
-        const val MAX_DESKTOP_APPS = 15
     }
 }

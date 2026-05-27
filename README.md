@@ -1,14 +1,18 @@
 # BootLauncher
 
-Android 开机自启应用 —— 设备启动后自动按顺序、带延时地拉起用户配置的其他应用。
+Android 桌面应用 —— 替代系统桌面，提供 4x5 网格启动界面，支持开机自启、延时启动、来电后自动恢复应用。
 
 ## 功能特性
 
-- **开机自启** —— 监听 `BOOT_COMPLETED` 广播，设备启动后自动运行
-- **双保险策略** —— 同时支持广播监听和 Launcher 桌面两种自启方式，兼容国产 ROM
-- **顺序 + 延时启动** —— 可为每个应用单独配置启动延时，按用户设定的顺序逐一拉起
-- **可视化管理** —— Material3 界面，支持添加、删除、排序、启用/禁用、配置延时
-- **已安装应用选择** —— 从设备已安装应用列表中挑选，支持搜索过滤
+- **4x5 桌面网格** —— 黑色背景，显示应用图标+名称，点击启动，最后一格进入设置
+- **桌面应用管理** —— 设置中可为每个已配置应用开关"显示在桌面"，最多 19 个
+- **开机自启** —— 监听 `BOOT_COMPLETED` 广播，按配置顺序延时启动应用
+- **来电恢复** —— 来电结束 30s 后自动按配置重新启动所有应用
+- **广播启动应用** —— 接收 `com.bootLauncher.LAUNCH_APP` 广播，指定包名启动应用
+- **锁屏穿透** —— 可选开启"Show on Lock Screen"跳过锁屏直接显示桌面
+- **顺序 + 延时启动** —— 每个应用可单独配置延时，按设定顺序逐一拉起
+- **权限诊断** —— 一键检测所有必要权限和配置状态
+- **华为/荣耀兼容** —— 支持 `pm set-home-activity` 命令设置默认桌面
 
 ## 环境要求
 
@@ -30,12 +34,10 @@ Android 开机自启应用 —— 设备启动后自动按顺序、带延时地�
 # JDK
 sudo apt install openjdk-17-jdk
 
-# Gradle（仅需用于生成 Wrapper，实际编译由 Wrapper 管理的版本执行）
+# Gradle
 wget https://services.gradle.org/distributions/gradle-8.10-bin.zip
 unzip gradle-8.10-bin.zip -d ~/
 export PATH=$HOME/gradle-8.10/bin:$PATH
-gradle --version  # 验证安装
-# 注意：系统安装的 Gradle 版本不影响编译，Wrapper 会使用指定版本（当前 8.10）
 
 # Android SDK 命令行工具
 mkdir -p ~/Android/Sdk/cmdline-tools
@@ -44,9 +46,9 @@ wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_la
 unzip commandlinetools-linux-11076708_latest.zip
 mv cmdline-tools latest
 
-# 环境变量（加入 ~/.bashrc 持久化）
+# 环境变量
 export ANDROID_HOME=$HOME/Android/Sdk
-export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$HOME/gradle-8.10/bin:$PATH
+export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_PLATFORM-tools:$HOME/gradle-8.10/bin:$PATH
 
 # 安装 SDK 组件
 sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
@@ -57,7 +59,6 @@ yes | sdkmanager --licenses
 
 ```bash
 cd ~/cxr/code/git/bootlauncher
-# 如果系统 Gradle 版本不是 8.10，需显式指定版本（AGP 8.5.0 要求 Gradle ≥ 8.7）
 gradle wrapper --gradle-version 8.10
 ```
 
@@ -78,8 +79,6 @@ keytool -genkeypair -v \
   -dname "CN=BootLauncher, OU=Dev, O=BootLauncher, L=Unknown, ST=Unknown, C=CN"
 ```
 
-> 已有默认证书，无需重新生成即可直接编译。如需自定义密码或信息，修改上述参数，并同步更新 `app/build.gradle.kts` 中的 `signingConfigs`。
-
 ### 4. 编译项目
 
 ```bash
@@ -95,23 +94,40 @@ keytool -genkeypair -v \
 
 ## 使用方法
 
-1. 安装 APK 到 Android 设备
-2. 打开应用，点击右下角 **+** 按钮添加需要自启的应用
-3. 为每个应用设置启动延时（单位：秒）
-4. 长按拖拽调整启动顺序
-5. 开关控制是否启用开机自启
+### 桌面
 
-### 设为默认桌面（备用方案）
+1. 安装 APK，设为默认桌面
+2. 桌面显示 4x5 黑色网格，已配置的应用显示图标+名称
+3. 点击图标启动应用，最后一格点击进入设置
 
-如果设备开机后广播被系统拦截，可将应用设为默认桌面：
+### 设置
 
-> 设置 → 应用 → 默认应用 → 桌面 → 选择 BootLauncher
+1. 点击 **+** 添加需要自启的应用
+2. **Auto-start** 开关控制是否开机自动启动
+3. **Desktop** 开关控制是否显示在桌面（最多 15 个）
+4. **Show on Lock Screen** 开关控制是否跳过锁屏
+5. 为每个应用设置启动延时
+6. **Diagnose Permissions** 一键检测权限配置
+
+### 设为默认桌面
+
+1. 安装后打开设置，点击 **"Set as Default Launcher"**
+2. 或手动：设置 → 应用 → 默认应用 → 桌面 → 选择 BootLauncher
+
+### 广播启动应用
+
+```bash
+adb shell am broadcast \
+  -a com.bootlauncher.LAUNCH_APP \
+  -p com.bootlauncher \
+  --es package_name com.tencent.mm
+```
 
 ## 技术栈
 
 - **语言**：Kotlin 2.0.21
 - **UI**：Jetpack Compose + Material3
-- **数据库**：Room 2.6.1
+- **数据库**：Room (AppEntity + LaunchLog)
 - **架构**：MVVM (AndroidViewModel + StateFlow)
 - **构建**：Gradle + Kotlin DSL + Version Catalog
 
@@ -119,12 +135,14 @@ keytool -genkeypair -v \
 
 ```
 app/src/main/kotlin/com/bootlauncher/
-├── BootLauncherApp.kt               # Application 入口
+├── BootLauncherApp.kt               # Application 入口，SharedPreferences
 ├── data/local/
-│   ├── AppEntity.kt                 # Room 实体（包名、延时、排序、启用状态）
-│   ├── AppDao.kt                    # 数据访问对象
-│   ├── AppDatabase.kt               # Room 数据库
-│   └── AppRepository.kt             # 数据仓库
+│   ├── AppEntity.kt                 # 应用实体（包名、延时、排序、启用、桌面显示）
+│   ├── AppDao.kt                    # Room DAO
+│   ├── AppDatabase.kt               # Room 数据库（v3）
+│   ├── AppRepository.kt             # 数据仓库
+│   ├── LaunchLog.kt                 # 启动日志实体
+│   └── LaunchLogDao.kt              # 启动日志 DAO
 ├── receiver/
 │   └── BootReceiver.kt              # 开机广播接收器
 ├── service/
@@ -132,15 +150,18 @@ app/src/main/kotlin/com/bootlauncher/
 ├── ui/
 │   ├── theme/                       # Material3 主题
 │   ├── main/
-│   │   ├── MainActivity.kt          # 应用管理界面
-│   │   └── MainViewModel.kt         # 界面状态管理
+│   │   ├── MainActivity.kt          # 设置界面（权限诊断、应用管理）
+│   │   └── MainViewModel.kt         # 设置界面状态管理
 │   ├── launcher/
-│   │   └── LauncherActivity.kt      # 桌面备用入口
+│   │   ├── LauncherActivity.kt      # 桌面（广播接收、来电监听）
+│   │   ├── LauncherDesktopScreen.kt  # 4x5 网格桌面
+│   │   └── LauncherViewModel.kt     # 桌面数据管理
 │   └── components/
-│       ├── AppListItem.kt           # 应用列表项
-│       ├── AppPickerSheet.kt        # 应用选择器（底部弹窗）
+│       ├── AppListItem.kt           # 应用列表项（含 Desktop 开关）
+│       ├── AppPickerSheet.kt        # 应用选择器底部弹窗
 │       └── DelayPickerDialog.kt     # 延时设置对话框
 └── util/
+    ├── FileLogger.kt                # 文件日志（logcat 不可用时的调试方案）
     └── PackageManagerHelper.kt      # 已安装应用查询工具
 ```
 
@@ -149,9 +170,11 @@ app/src/main/kotlin/com/bootlauncher/
 | 权限 | 用途 |
 |------|------|
 | `RECEIVE_BOOT_COMPLETED` | 监听设备开机广播 |
+| `READ_PHONE_STATE` | 监听来电状态，用于来电后恢复应用 |
 | `FOREGROUND_SERVICE` | 前台服务（确保启动过程不被系统杀死） |
 | `FOREGROUND_SERVICE_SPECIAL_USE` | Android 14+ 特殊用途前台服务声明 |
 | `QUERY_ALL_PACKAGES` | 查询设备上所有已安装应用（Android 11+） |
+| `POST_NOTIFICATIONS` | 前台服务通知栏通知（Android 13+） |
 
 ## License
 
