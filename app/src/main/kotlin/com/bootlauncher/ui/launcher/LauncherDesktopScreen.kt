@@ -1,5 +1,7 @@
 package com.bootlauncher.ui.launcher
 
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -16,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
+import com.bootlauncher.receiver.LockScreenAdminReceiver
 import com.bootlauncher.data.local.AppEntity
 import com.bootlauncher.ui.main.MainActivity
 import com.bootlauncher.util.FileLogger
@@ -47,7 +51,7 @@ fun LauncherDesktopScreen(
     val context = LocalContext.current
 
     val desktopItems = remember(apps) {
-        val items = mutableListOf<DesktopItem>(DesktopItem.Settings)
+        val items = mutableListOf<DesktopItem>(DesktopItem.Settings, DesktopItem.Lock)
         items.addAll(apps.map { DesktopItem.App(it) })
         if (items.size < MAX_DESKTOP_SLOTS) {
             repeat(MAX_DESKTOP_SLOTS - items.size) {
@@ -78,6 +82,10 @@ fun LauncherDesktopScreen(
                         }
                         context.startActivity(intent)
                     }
+                )
+                is DesktopItem.Lock -> LockGridItem(
+                    context = context,
+                    onClick = { lockScreen(context) }
                 )
                 is DesktopItem.Empty -> EmptySlot()
             }
@@ -182,6 +190,41 @@ private fun SettingsGridItem(onClick: () -> Unit) {
 }
 
 @Composable
+private fun LockGridItem(
+    context: Context,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(MaterialTheme.shapes.small)
+            .clickable { onClick() }
+            .padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier.size(48.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Lock,
+                contentDescription = "Lock Screen",
+                tint = Color.White,
+                modifier = Modifier.size(40.dp)
+            )
+        }
+        Text(
+            text = "Lock",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 2.dp)
+        )
+    }
+}
+
+@Composable
 private fun EmptySlot() {
     Box(modifier = Modifier.fillMaxSize())
 }
@@ -201,8 +244,26 @@ private fun launchApp(context: Context, packageName: String) {
     }
 }
 
+private fun lockScreen(context: Context) {
+    try {
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val componentName = ComponentName(context, LockScreenAdminReceiver::class.java)
+        if (dpm.isAdminActive(componentName)) {
+            dpm.lockNow()
+        } else {
+            val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
+            }
+            context.startActivity(intent)
+        }
+    } catch (e: Exception) {
+        FileLogger.e("LauncherDesktop", "Failed to lock screen", e)
+    }
+}
+
 private sealed class DesktopItem {
     data class App(val app: AppEntity) : DesktopItem()
     object Settings : DesktopItem()
+    object Lock : DesktopItem()
     object Empty : DesktopItem()
 }

@@ -1,6 +1,8 @@
 package com.bootlauncher.ui.launcher
 
 import android.Manifest
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -20,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import com.bootlauncher.BootLauncherApp
+import com.bootlauncher.receiver.LockScreenAdminReceiver
 import com.bootlauncher.service.AppLaunchService
 import com.bootlauncher.util.FileLogger
 
@@ -108,11 +111,37 @@ class LauncherActivity : ComponentActivity() {
     }
 
     private fun handleLaunchIntent(intent: Intent?) {
-        if (intent?.action == "com.bootlauncher.LAUNCH_APP") {
-            val packageName = intent.getStringExtra("package_name")
-            if (packageName != null) {
-                FileLogger.d("LauncherActivity", "Received LAUNCH_APP intent: $packageName")
-                launchApp(packageName)
+        when (intent?.action) {
+            "com.bootlauncher.LAUNCH_APP" -> {
+                val packageName = intent.getStringExtra("package_name")
+                if (packageName != null) {
+                    FileLogger.d("LauncherActivity", "Received LAUNCH_APP intent: $packageName")
+                    launchApp(packageName)
+                }
+            }
+            "com.bootlauncher.SCREEN_CONTROL" -> {
+                val actions = intent.getStringArrayExtra("action_type")
+                    ?: intent.getStringExtra("action_type")?.let { arrayOf(it) }
+                    ?: arrayOf("wake")
+                FileLogger.d("LauncherActivity", "Received SCREEN_CONTROL: ${actions.joinToString()}")
+                for (action in actions) {
+                    when (action) {
+                        "wake" -> window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+                        "unlock" -> window.addFlags(
+                            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                                or WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+                        )
+                        "lock" -> {
+                            val dpm = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
+                            val comp = ComponentName(this, LockScreenAdminReceiver::class.java)
+                            if (dpm.isAdminActive(comp)) {
+                                dpm.lockNow()
+                            } else {
+                                FileLogger.e("LauncherActivity", "Device admin not activated, cannot lock")
+                            }
+                        }
+                    }
+                }
             }
         }
     }

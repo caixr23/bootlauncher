@@ -1,14 +1,16 @@
 # BootLauncher
 
-Android 桌面应用 —— 替代系统桌面，提供 4x5 网格启动界面，支持开机自启、延时启动、来电后自动恢复应用。
+Android 桌面应用 —— 替代系统桌面，提供 4x5 网格启动界面，支持开机自启、延时启动、来电后自动恢复应用、一键锁屏。
 
 ## 功能特性
 
-- **4x5 桌面网格** —— 黑色背景，显示应用图标+名称，点击启动，最后一格进入设置
+- **4x5 桌面网格** —— 黑色背景，显示应用图标+名称，点击启动，第一格设置，第二格一键锁屏
 - **桌面应用管理** —— 设置中可为每个已配置应用开关"显示在桌面"，最多 19 个
 - **开机自启** —— 监听 `BOOT_COMPLETED` 广播，按配置顺序延时启动应用
 - **来电恢复** —— 来电结束 30s 后自动按配置重新启动所有应用
 - **广播启动应用** —— 接收 `com.bootLauncher.LAUNCH_APP` 广播，指定包名启动应用
+- **亮屏解锁/锁屏** —— 接收 `com.bootLauncher.SCREEN_CONTROL` 广播，通过 `action_type` 参数控制
+- **一键锁屏** —— 桌面快捷锁屏按钮，需激活设备管理员权限
 - **锁屏穿透** —— 可选开启"Show on Lock Screen"跳过锁屏直接显示桌面
 - **顺序 + 延时启动** —— 每个应用可单独配置延时，按设定顺序逐一拉起
 - **权限诊断** —— 一键检测所有必要权限和配置状态
@@ -123,6 +125,32 @@ adb shell am broadcast \
   --es package_name com.tencent.mm
 ```
 
+### 广播屏幕控制
+
+支持 `action_type` 参数：`wake`（亮屏）、`unlock`（解锁）、`lock`（锁屏）。可同时传多个参数：
+
+```bash
+# 亮屏 + 解锁
+adb shell am broadcast \
+  -a com.bootlauncher.SCREEN_CONTROL \
+  -p com.bootlauncher \
+  --esa action_type wake,unlock
+
+# 仅亮屏
+adb shell am broadcast \
+  -a com.bootlauncher.SCREEN_CONTROL \
+  -p com.bootlauncher \
+  --es action_type wake
+
+# 仅锁屏
+adb shell am broadcast \
+  -a com.bootlauncher.SCREEN_CONTROL \
+  -p com.bootlauncher \
+  --es action_type lock
+```
+
+> `unlock` 仅在无安全锁（滑动/无锁屏）时可自动解锁，PIN/密码锁时无效。`lock` 需已激活设备管理员权限。
+
 ## 技术栈
 
 - **语言**：Kotlin 2.0.21
@@ -144,7 +172,8 @@ app/src/main/kotlin/com/bootlauncher/
 │   ├── LaunchLog.kt                 # 启动日志实体
 │   └── LaunchLogDao.kt              # 启动日志 DAO
 ├── receiver/
-│   └── BootReceiver.kt              # 开机广播接收器
+│   ├── BootReceiver.kt              # 开机广播接收器
+│   └── LockScreenAdminReceiver.kt   # 设备管理员（一键锁屏）
 ├── service/
 │   └── AppLaunchService.kt          # 前台服务，顺序拉起应用
 ├── ui/

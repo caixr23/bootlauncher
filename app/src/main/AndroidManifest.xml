@@ -44,7 +44,22 @@
             <intent-filter>
                 <action android:name="com.bootlauncher.LAUNCH_APP" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="com.bootlauncher.SCREEN_CONTROL" />
+            </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".receiver.LockScreenAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".receiver.BootReceiver"
