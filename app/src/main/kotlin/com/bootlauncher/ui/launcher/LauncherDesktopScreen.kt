@@ -47,13 +47,13 @@ fun LauncherDesktopScreen(
     val context = LocalContext.current
 
     val desktopItems = remember(apps) {
-        val items = apps.map { DesktopItem.App(it) }.toMutableList<DesktopItem>()
-        if (items.size < MAX_DESKTOP_SLOTS - 1) {
-            repeat(MAX_DESKTOP_SLOTS - 1 - items.size) {
+        val items = mutableListOf<DesktopItem>(DesktopItem.Settings)
+        items.addAll(apps.map { DesktopItem.App(it) })
+        if (items.size < MAX_DESKTOP_SLOTS) {
+            repeat(MAX_DESKTOP_SLOTS - items.size) {
                 items.add(DesktopItem.Empty)
             }
         }
-        items.add(DesktopItem.Settings)
         items
     }
 
