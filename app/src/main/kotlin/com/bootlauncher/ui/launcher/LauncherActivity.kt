@@ -1,6 +1,9 @@
 package com.bootlauncher.ui.launcher
 
 import android.Manifest
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Intent
@@ -21,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
+import com.bootlauncher.R
 import com.bootlauncher.BootLauncherApp
 import com.bootlauncher.receiver.LockScreenAdminReceiver
 import com.bootlauncher.service.AppLaunchService
@@ -143,6 +147,19 @@ class LauncherActivity : ComponentActivity() {
                     }
                 }
             }
+            "com.bootlauncher.SHOW_NOTIFICATION" -> {
+                val title = intent.getStringExtra("title") ?: "BootLauncher"
+                val message = intent.getStringExtra("message") ?: ""
+                val durationMs = intent.getLongExtra("duration", 3000)
+                val importance = when (intent.getStringExtra("importance")) {
+                    "high" -> NotificationManager.IMPORTANCE_HIGH
+                    "default" -> NotificationManager.IMPORTANCE_DEFAULT
+                    "min" -> NotificationManager.IMPORTANCE_MIN
+                    else -> NotificationManager.IMPORTANCE_LOW
+                }
+                FileLogger.d("LauncherActivity", "Received SHOW_NOTIFICATION: title=$title, message=$message, duration=${durationMs}ms, importance=$importance")
+                showNotification(title, message, durationMs, importance)
+            }
         }
     }
 
@@ -158,5 +175,21 @@ class LauncherActivity : ComponentActivity() {
         } catch (e: Exception) {
             FileLogger.e("LauncherActivity", "Failed to launch $packageName", e)
         }
+    }
+
+    private fun showNotification(title: String, message: String, durationMs: Long, importance: Int) {
+        val channelId = "bootlauncher_notify_channel"
+        val notificationId = 1001
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.createNotificationChannel(
+            NotificationChannel(channelId, "Notification", importance)
+        )
+        val notification = Notification.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText(message)
+            .build()
+        nm.notify(notificationId, notification)
+        handler.postDelayed({ nm.cancel(notificationId) }, durationMs)
     }
 }

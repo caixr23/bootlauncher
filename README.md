@@ -151,6 +151,34 @@ adb shell am broadcast \
 
 > `unlock` 仅在无安全锁（滑动/无锁屏）时可自动解锁，PIN/密码锁时无效。`lock` 需已激活设备管理员权限。
 
+### 广播显示通知
+
+```bash
+# 默认标题、低优先级、3s 关闭
+adb shell am broadcast \
+  -a com.bootlauncher.SHOW_NOTIFICATION \
+  -p com.bootlauncher \
+  --es message "Hello World"
+
+# 自定义标题 + 高优先级 + 5s 关闭
+adb shell am broadcast \
+  -a com.bootlauncher.SHOW_NOTIFICATION \
+  -p com.bootlauncher \
+  --es title "提醒" \
+  --es message "测试消息" \
+  --es importance high \
+  --el duration 5000
+```
+
+参数说明：
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `title` | `BootLauncher` | 通知标题 |
+| `message` | `""` | 通知内容 |
+| `duration` | `3000` | 自动关闭时间（毫秒） |
+| `importance` | `low` | 优先级：`min` / `low` / `default` / `high` |
+
 ## 技术栈
 
 - **语言**：Kotlin 2.0.21

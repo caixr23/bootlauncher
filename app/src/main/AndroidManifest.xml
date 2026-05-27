@@ -47,6 +47,9 @@
             <intent-filter>
                 <action android:name="com.bootlauncher.SCREEN_CONTROL" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="com.bootlauncher.SHOW_NOTIFICATION" />
+            </intent-filter>
         </activity>
 
         <receiver
